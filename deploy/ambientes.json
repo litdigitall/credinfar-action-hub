@@ -1,0 +1,18 @@
+{
+  "_comentario": "Ambientes onde o Credinfar Action Hub foi publicado. Publicar: npm run build && pac code push --environment <url>. A solution CFSCredinfarHub (publisher cfscredinfar, prefixo cdf) leva o app; sem tabelas nesta fase.",
+  "ambientes": {
+    "dev": {
+      "descricao": "Ambiente de desenvolvimento (CFS Navigator)",
+      "environmentId": "aa9aa103-53ae-e549-8f11-8e79e2d2bfec",
+      "url": "https://org2713c0e4.crm2.dynamics.com",
+      "appId": "6b2043e5-9fb2-4f8e-824a-5d82902e21be",
+      "solution": "CFSCredinfarHub"
+    },
+    "abbott": {
+      "descricao": "Ambiente da Abbott: importar deploy/CFSCredinfarHub_completa.zip pelo portal e compartilhar o app",
+      "environmentId": "",
+      "url": "",
+      "appId": ""
+    }
+  }
+}

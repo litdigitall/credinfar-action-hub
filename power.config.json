@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "appId": "6b2043e5-9fb2-4f8e-824a-5d82902e21be",
+  "appDisplayName": "Credinfar Action Hub",
+  "region": "prod",
+  "environmentId": "aa9aa103-53ae-e549-8f11-8e79e2d2bfec",
+  "description": "Hub operacional de crédito e cobrança: remessas ao Credinfar, Central de Ações, INFASSOC.SIC e consulta simulada da API. By CFS Navigator",
+  "buildPath": "./dist",
+  "buildEntryPoint": "index.html",
+  "localAppUrl": "http://localhost:3003",
+  "logoPath": "Default",
+  "connectionReferences": {},
+  "databaseReferences": {}
+}
