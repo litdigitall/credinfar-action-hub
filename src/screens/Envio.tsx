@@ -7,7 +7,7 @@ import { IconCheck, IconDownload, IconFileTypeTxt, IconSend, IconUpload } from "
 import { useHub } from "../App";
 import { Botao } from "../components/Botao";
 import { Aviso, Campo, Codigo, Modal, inputStyle } from "../components/ui";
-import { MetricCard, Section, brlExec, fmtDataHora, fmtInt } from "../components/visual";
+import { Section, brlExec, fmtDataHora, fmtInt } from "../components/visual";
 import { decomporLinha } from "../engine/infassoc";
 import { brlInt, cnpjValido, formatarCnpj, soDigitos } from "../engine/util";
 import { lerCarteiraCsv, MODELO_CSV } from "../services/arquivoCarteira";
@@ -71,12 +71,11 @@ export function Envio() {
         <Passos atual={passo} />
       </div>
 
-      {r && (
-        <div className="gridKpi" style={{ marginBottom: 18 }}>
-          <MetricCard label="Clientes no envio" valor={fmtInt(noEnvio)} sub={r.excluidos.length ? `${fmtInt(r.excluidos.length)} tirados deste envio` : `recebidos em ${fmtDataHora(r.recebidaEm)}`} />
-          <MetricCard label="Travados" valor={fmtInt(travados.length)} cor={travados.length ? tema.danger : tema.ok} sub={travados.length ? "precisam de correção" : "nada impede o envio"} />
-          <MetricCard label="Avisos" valor={fmtInt(avisos.length)} cor={tema.amber} sub="só para conhecimento" />
-          <MetricCard label="Débito informado" valor={brlExec(m.carteira)} sub={`${brlExec(m.vencido)} vencidos`} />
+      {r && passo !== 4 && (
+        <div style={{ fontSize: 14.5, color: tema.ink, margin: "0 2px 18px" }}>
+          <b>{fmtInt(noEnvio)} clientes</b> neste envio, {brlExec(m.carteira)} de débito informado.{" "}
+          {travados.length > 0 ? <b style={{ color: tema.danger }}>{fmtInt(travados.length)} travado(s).</b> : <b style={{ color: tema.ok }}>Nada impede o envio.</b>}
+          {r.excluidos.length > 0 ? ` ${fmtInt(r.excluidos.length)} tirado(s) deste envio.` : ""}
         </div>
       )}
 
@@ -192,8 +191,10 @@ export function Envio() {
 
       {/* ------------------------------------------------ Avisos (informativos) */}
       {r && passo !== 4 && avisos.length > 0 && (
-        <Section titulo="Avisos" sub="Não impedem o envio. Servem para você saber o que está indo para a Credinfar.">
-          <div style={{ ...cardStyle, display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <details style={{ ...cardStyle, marginTop: 6 }}>
+          <summary style={{ cursor: "pointer", fontWeight: 700, color: tema.blueDark }}>{fmtInt(avisos.length)} avisos, só para conhecimento</summary>
+          <div style={{ fontSize: 13, color: tema.muted, margin: "8px 0 10px" }}>Não impedem o envio. Servem para você saber o que está indo para a Credinfar.</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {(Object.keys(ROTULO_AVISO) as CodigoAcao[]).map((cod) => {
               const n = avisos.filter((a) => a.codigo === cod).length;
               if (n === 0) return null;
@@ -206,7 +207,7 @@ export function Envio() {
             })}
           </div>
           {avisoAberto && (
-            <div style={{ ...cardStyle, marginTop: 10, padding: 0 }}>
+            <div style={{ marginTop: 10, border: `1px solid ${tema.line}`, borderRadius: 10 }}>
               {avisos.filter((a) => a.codigo === avisoAberto).slice(0, 40).map((a) => {
                 const c = clientes.get(a.clienteId);
                 return (
@@ -220,7 +221,7 @@ export function Envio() {
               {avisos.filter((a) => a.codigo === avisoAberto).length > 40 && <div style={{ padding: "8px 14px", fontSize: 12.5, color: tema.muted }}>Mostrando os 40 primeiros.</div>}
             </div>
           )}
-        </Section>
+        </details>
       )}
 
       {corrigindo && clientes.get(corrigindo.clienteId) && (

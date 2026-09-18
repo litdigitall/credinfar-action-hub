@@ -37,6 +37,11 @@ export interface FichaResumo {
   canal: string;
   dataBase: string; // D-1
   avaliacao: string; // riskRating.avaliacaoAtual
+  avaliacaoAnterior: string; // nota na leitura do mês anterior
+  tendencia: "melhorando" | "estável" | "piorando"; // vencido no mercado: últimos 3 meses x 3 anteriores
+  naListaPerformance: boolean; // alerta "Incluído no relatório semanal de Performance"
+  limiteMedioMercado: number; // média dos limites que os outros fornecedores dão
+  atrasoMedioMercado: number; // dias
   frases: string[];
   debitoAtualRede: number; // soma das fontes
   debitoVencidoRede: number;
@@ -141,7 +146,8 @@ export function consultarCredinfar(
   parametros: Parametros,
   clientes: Cliente[],
   consultasNoCiclo: number,
-  agora = new Date()
+  agora = new Date(),
+  opcoes: { semXml?: boolean } = {}
 ): RespostaCredinfar {
   const raiz = soDigitos(cnpjRaizEntrada).slice(0, 8);
   const r = prng(sementeDe("credinfar:" + raiz));
@@ -172,7 +178,11 @@ export function consultarCredinfar(
   }
   const principal = conhecida ? filiais[0] : empresaSintetica(raiz, r);
   const dataBase = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() - 1); // D-1
-  const avaliacao = avaliacaoDe(conhecida ? principal.risco : null, r);
+  // Parte da carteira paga bem o mercado mesmo atrasando com a gente (divergência, boleto, disputa)
+  const r3 = prng(sementeDe("mercado:" + raiz));
+  const pagaBemNoMercado = conhecida && r3() < 0.06;
+  const avaliacaoBase = avaliacaoDe(conhecida ? principal.risco : null, r);
+  const avaliacao = pagaBemNoMercado ? (r3() < 0.6 ? "A" : "B") : avaliacaoBase;
 
   // Fontes negociais anonimizadas (até 10, excluindo a própria associada)
   const totalFontes = 3 + Math.floor(r() * 14);
@@ -181,7 +191,8 @@ export function consultarCredinfar(
   for (let i = 0; i < nFontes; i++) {
     const escala = 0.15 + r() * 1.2;
     const atual = Math.round(principal.debitoAtual * escala);
-    const pctVenc = Math.max(0, Math.min(0.6, (principal.debitoVencido / Math.max(1, principal.debitoAtual)) * (0.5 + r())));
+    const sorteioFonte = r();
+    const pctVenc = pagaBemNoMercado ? 0.005 + sorteioFonte * 0.025 : Math.max(0, Math.min(0.6, (principal.debitoVencido / Math.max(1, principal.debitoAtual)) * (0.5 + sorteioFonte)));
     const venc = Math.round(atual * pctVenc);
     const f = [0.35, 0.25, 0.2, 0.1, 0.06, 0.04].map((p) => Math.round(venc * p)) as [number, number, number, number, number, number];
     f[0] += venc - f.reduce((t, v) => t + v, 0);
@@ -204,6 +215,15 @@ export function consultarCredinfar(
   const debitoVencidoRede = fontes.reduce((t, f) => t + f.debitoVencido, 0);
   const percentualVencido = debitoAtualRede > 0 ? (debitoVencidoRede / debitoAtualRede) * 100 : 0;
 
+  // Evolução: nota do mês anterior e inclinação do vencido no mercado
+  const r2 = prng(sementeDe("evolucao:" + raiz));
+  const NOTAS = "ABCDE";
+  const iNota = NOTAS.indexOf(avaliacao);
+  const sorteio = r2();
+  const iAnterior = Math.max(0, Math.min(4, sorteio < 0.9 ? iNota : sorteio < 0.95 ? iNota - 1 : iNota + 1));
+  const avaliacaoAnterior = NOTAS[iAnterior];
+  const inclinacao = iAnterior < iNota ? 0.65 : iAnterior > iNota ? -0.5 : avaliacao >= "D" ? 0.3 : 0;
+
   // Séries mensais (informacaoComplementar): 12 meses até D-1
   const serieMeses: FichaResumo["serieMeses"] = [];
   for (let m = 11; m >= 0; m--) {
@@ -212,8 +232,8 @@ export function consultarCredinfar(
     serieMeses.push({
       mes: mesAno(d),
       compra: Math.round((debitoAtualRede / 3) * fator),
-      debito: Math.round(debitoAtualRede * (0.8 + r() * 0.4)),
-      vencido: Math.round(debitoVencidoRede * (0.6 + r() * 0.8)),
+      debito: Math.round(debitoAtualRede * (0.92 + r() * 0.16)),
+      vencido: Math.round(debitoVencidoRede * Math.max(0.05, 1 - inclinacao * (m / 11)) * (0.92 + r() * 0.16)),
       dso: Math.round(20 + r() * 40),
       consultas: Math.floor(r() * 8),
     });
@@ -271,6 +291,17 @@ export function consultarCredinfar(
     }
   }
 
+  const pctMes = (x: { debito: number; vencido: number }) => (x.debito > 0 ? (x.vencido / x.debito) * 100 : 0);
+  const media = (v: number[]) => v.reduce((t, x) => t + x, 0) / Math.max(1, v.length);
+  const ult3 = media(serieMeses.slice(9).map(pctMes));
+  const ant3 = media(serieMeses.slice(6, 9).map(pctMes));
+  const tendencia: FichaResumo["tendencia"] = ult3 > ant3 * 1.15 && ult3 - ant3 > 1.5 ? "piorando" : ult3 < ant3 * 0.85 && ant3 - ult3 > 1.5 ? "melhorando" : "estável";
+  const sorteioLista = r2();
+  const naListaPerformance = avaliacao === "E" ? sorteioLista < 0.9 : avaliacao === "D" ? sorteioLista < 0.6 : avaliacao === "C" ? sorteioLista < 0.08 : false;
+  const comLimite = fontes.filter((x) => x.limite > 0);
+  const limiteMedioMercado = comLimite.length ? Math.round(media(comLimite.map((x) => x.limite)) / 1000) * 1000 : 0;
+  const atrasoMedioMercado = Math.round(media(fontes.map((x) => x.mediaAtraso)));
+
   const ficha: FichaResumo = {
     cnpjRaiz: raiz,
     nome: principal.nome,
@@ -284,6 +315,11 @@ export function consultarCredinfar(
     canal: principal.canal,
     dataBase: dataBr(dataBase),
     avaliacao,
+    avaliacaoAnterior,
+    tendencia,
+    naListaPerformance,
+    limiteMedioMercado,
+    atrasoMedioMercado,
     frases: FRASES_RISCO[avaliacao],
     debitoAtualRede,
     debitoVencidoRede,
@@ -299,7 +335,7 @@ export function consultarCredinfar(
     socios,
     balancos,
   };
-  const xml = montarXml(ficha, principal, filiais.length > 0 ? filiais : [principal], dataBase);
+  const xml = opcoes.semXml ? "" : montarXml(ficha, principal, filiais.length > 0 ? filiais : [principal], dataBase);
   return { resultado: "OK", httpStatus: 200, xml, ficha, duracaoMs: duracaoBase + Math.round(xml.length / 60), bytes: xml.length };
 }
 
@@ -315,7 +351,7 @@ function montarXml(f: FichaResumo, p: Cliente, filiais: Cliente[], dataBase: Dat
 
   bloco("acoes", Array.from({ length: oc.acoes }, (_, i) => `<acao>${tag("autor", "FAZENDA PUBLICA DO ESTADO")}${tag("cidade", f.cidade)}${tag("cnpjReu", formatarCnpj(p.cnpj))}${tag("comarca", f.cidade)}${tag("dtAjuizamento", `1${i}/03/${dataBase.getFullYear() - 1}`)}${tag("dtCadastro", dataConsulta)}${tag("forum", "FORO CENTRAL CIVEL")}${tag("processoNumero", `10${i}0${f.cnpjRaiz}202${i}`)}${tag("processoTipo", "EXECUCAO FISCAL")}${tag("uf", f.uf)}${tag("valor", "0,00")}${tag("vara", `${i + 1} VARA DA FAZENDA PUBLICA`)}</acao>`));
   bloco("administradores", f.socios.slice(0, 1).map((s) => `<administrador>${tag("cnpjCpf", "***.***.***-**")}${tag("dataConsulta", dataConsulta)}${tag("nomeAdministrador", s)}</administrador>`));
-  bloco("alertas", f.avaliacao >= "D" ? [`<alerta>${tag("alerta", "Incluído no relatório semanal de Performance")}${tag("dtCadastro", dataConsulta)}</alerta>`] : []);
+  bloco("alertas", f.naListaPerformance ? [`<alerta>${tag("alerta", "Incluído no relatório semanal de Performance")}${tag("dtCadastro", dataConsulta)}</alerta>`] : []);
   // balancoAnalise, balancoComentario, balancoConceito, balancoDemonsFluxoCaixa, balancoIndicesPadraoAno, balancos, balancosIndices
   if (f.balancos.length === 0) {
     for (const b of ["balancoAnalise", "balancoComentario", "balancoConceito", "balancoDemonsFluxoCaixa", "balancoIndicesPadraoAno", "balancos", "balancosIndices"]) bloco(b, []);

@@ -37,6 +37,7 @@ export function Configuracoes() {
   const { estado, salvarParametros, reiniciar } = useHub();
   const [p, setP] = useState<Parametros>({ ...estado.parametros });
   const [confirmar, setConfirmar] = useState(false);
+  const [consultasAntes, setConsultasAntes] = useState<number | null>(null); // para desfazer a simulação do limite
   const atual = estado.parametros;
   const set = <K extends keyof Parametros>(k: K, v: Parametros[K]) => setP({ ...p, [k]: v });
   const num = (v: string) => Math.max(0, Number(v.replace(/\D/g, "")) || 0);
@@ -61,12 +62,15 @@ export function Configuracoes() {
         </div>
       </Section>
 
-      <Section titulo="Modo demonstração" sub="Simule as situações em que a Credinfar recusa a consulta. Depois vá em Consultar cliente e faça uma consulta.">
+      <Section titulo="Modo demonstração" sub="Simule as situações em que a Credinfar recusa a consulta. Depois vá em Clientes e consulte a Credinfar.">
         <div style={{ ...cardStyle, display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Botao variante="secundario" tamanho="pequeno" onClick={() => salvarParametros({ ...atual, ipSaida: ipOk ? IP_ESTRANHO : atual.ipCadastrado }, ipOk ? "Simulação ligada: IP de saída não cadastrado." : "IP cadastrado restaurado.")}>
             {ipOk ? "Simular IP não cadastrado" : "Voltar ao IP cadastrado"}
           </Botao>
-          <Botao variante="secundario" tamanho="pequeno" onClick={() => salvarParametros({ ...atual, consultasNoMes: quotaCheia ? 1204 : limite }, quotaCheia ? "Limite de consultas restaurado." : "Simulação ligada: limite mensal atingido.")}>
+          <Botao variante="secundario" tamanho="pequeno" onClick={() => {
+            if (!quotaCheia) setConsultasAntes(atual.consultasNoMes);
+            salvarParametros({ ...atual, consultasNoMes: quotaCheia ? (consultasAntes ?? Math.round(limite * 0.7)) : limite }, quotaCheia ? "Limite de consultas restaurado." : "Simulação ligada: limite mensal atingido.");
+          }}>
             {quotaCheia ? "Restaurar o limite de consultas" : "Simular limite de consultas atingido"}
           </Botao>
           <Botao variante="secundario" tamanho="pequeno" onClick={() => salvarParametros({ ...atual, token: atual.token ? "" : TOKEN_DEMO }, atual.token ? "Simulação ligada: sem chave de acesso." : "Chave de acesso restaurada.")}>

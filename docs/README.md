@@ -1,70 +1,81 @@
-# Credinfar Action Hub · protótipo funcional (versão simples)
+# Credinfar Action Hub · do dado à decisão
 
-Protótipo em Power Apps (Code App, React + TypeScript) do processo Abbott × Credinfar. Tudo simulado,
-sem chamada externa: os dados são sintéticos e determinísticos. Assinatura: *By CFS Navigator*.
+Protótipo em Power Apps (Code App, React + TypeScript) para o time de Crédito e Cobrança da Abbott.
+Tudo simulado, sem chamada externa: dados sintéticos e determinísticos. Assinatura: *By CFS Navigator*.
 
-A primeira versão seguia o Documento Mestre ao pé da letra (nove telas, sete estados, oito tipos de
-regra). Esta versão organiza o trabalho de quem usa em **três momentos**:
+## O negócio, em uma página
 
-| Momento | O que a pessoa faz | Tela |
+A **Credinfar** é a associação de crédito e cobrança das indústrias farmacêuticas, veterinárias e de
+cosméticos (cerca de 150 associadas, desde 1972). Funciona por troca: todo mês cada associada **envia
+a posição dos seus clientes** (arquivo INFASSOC.SIC) e, em troca, **consulta como esses clientes pagam
+os outros fornecedores** (Ficha de Informações, nota de risco de A a E, histórico de débitos de 12
+meses, lista semanal de Performance, balanços). Quem envia mais pode consultar mais: o limite mensal é
+1,5 consulta por cliente enviado.
+
+Hoje a consulta é manual, CNPJ a CNPJ, no portal. A API muda o jogo porque permite:
+
+| O que a integração permite | Decisão que sai daí |
+|---|---|
+| **Ler a carteira inteira todo mês** dentro do limite de 1,5x (3.000 clientes cabem em 4.473 consultas) | Ser avisado de quem **piorou no mercado antes de atrasar com a gente**: reduzir limite, pedir garantia, segurar vendas |
+| Cruzar o **nosso vencido** com o **vencido no mercado** | Separar quem **atrasa com todo mundo** (risco de perda, cobrar primeiro) de quem **atrasa só conosco** (nota divergente, boleto, disputa: resolve com uma ligação) |
+| Cruzar **uso do limite** com **nota e pontualidade no mercado** | Achar **bom pagador com o limite cheio**: venda travada sem motivo, aumentar o limite |
+| Guardar cada leitura | Ver **tendência** (melhorando, estável, piorando) e o **retrato da carteira por nota** |
+
+O app foi desenhado em torno dessas decisões, não das telas do sistema.
+
+## As telas
+
+- **Hoje**: a tela inicial é uma lista curta. "Comece por estas 5": as decisões de maior valor entre as
+  que a carteira pede no mês (2 de risco, 2 de cobrança, 1 de venda). Cada cartão diz o que está
+  acontecendo, por que importa, quanto dinheiro está em jogo e oferece a ação com o valor já sugerido
+  ("Reduzir limite de R$ 480.000 para R$ 384.000"). Um clique, uma confirmação, e a decisão vai para o
+  histórico com o nome de quem decidiu. Filtros: Risco, Cobrança, Vender mais.
+- **Clientes**: busca por nome ou CNPJ. Mostra a posição conosco, a decisão que a leitura mensal já
+  pede (sem gastar consulta) e, a pedido, a ficha de hoje: leitura com as ações, tabela "com a gente x
+  no mercado" (deve, vencido, atraso médio, limite), tendência de 12 meses. O XML e as tabelas ficam em
+  "Ver detalhes". Também consulta empresa que não é cliente (8 dígitos do CNPJ).
+- **Envio do mês**: três passos em uma tela (receber a carteira, corrigir o que travou, enviar). Só
+  aparece o que impede o envio; cada travado tem Corrigir ou Tirar do envio; "Gerar arquivo e enviar"
+  monta o INFASSOC.SIC no layout oficial, confere e devolve o protocolo. Avisos ficam recolhidos.
+- **Histórico**: envios, consultas e quem fez o quê (exporta para Excel).
+- **Configurações**: essencial do envio, modo demonstração (IP não cadastrado, limite atingido, chave
+  ausente) e ajuda (o que trava o envio, layout do arquivo, pontos a confirmar com a Credinfar).
+
+## As regras de decisão (`src/engine/sinais.ts`, fixas, sem IA)
+
+| Leitura | Quando aparece | Ações oferecidas |
 |---|---|---|
-| **Enviar** (uma vez por mês) | Recebe a carteira, corrige o que travou e envia à Credinfar | Envio do mês |
-| **Consultar** (no dia a dia) | Busca um cliente e vê a ficha da Credinfar com uma recomendação | Consultar cliente |
-| **Acompanhar** | Vê os envios, as consultas e quem fez o quê | Histórico |
+| Risco alto de não receber | recuperação judicial/falência ou nota E, com débito conosco | segurar vendas a prazo, reduzir limite ao débito atual, pedir garantia |
+| O risco está subindo | débito ≥ R$ 50 mil e: nota caiu para C ou pior, ou entrou na lista de Performance com vencido crescendo, ou protestos com vencido alto | reduzir limite (sugerido), pedir garantia, só acompanhar |
+| Atrasando com todo o mercado | ≥ R$ 30 mil vencidos conosco e ≥ 25% vencido no mercado | cobrar agora e registrar (com promessa de pagamento), segurar vendas |
+| Paga os outros e atrasa com a gente | ≥ R$ 20 mil vencidos conosco, < 5% no mercado, nota A ou B | ligar e registrar |
+| Bom pagador com o limite cheio | nota A, < 3% vencido no mercado, sem ocorrência, usa ≥ 82% de um limite ≥ R$ 150 mil, em dia conosco | aumentar limite em 25% (editável) |
 
-Configurações guarda o essencial do envio, o modo demonstração e a ajuda.
+Os cortes de valor existem para a lista ficar curta: numa carteira de 3.000 clientes saem cerca de 150
+decisões no mês, e a tela inicial mostra cinco por vez. A leitura mensal guarda 300 consultas de
+reserva para o dia a dia e não reabre o que já foi decidido no mês.
 
-## Envio do mês: três passos em uma tela
+## O que o motor garante
 
-1. **Receber a carteira** do ERP (ou importar um CSV).
-2. **Corrigir o que travou.** Só aparecem os clientes que não cabem no arquivo da Credinfar:
-   CNPJ que não confere, cadastro incompleto, faixas de vencidos que não fecham com o total, valor que
-   não cabe. Cada um tem duas saídas: **Corrigir** (o formulário muda conforme o problema; nos vencidos
-   há o atalho "Usar o valor do ERP") ou **Tirar do envio**.
-3. **Enviar.** Um botão só: "Gerar arquivo e enviar". O app monta o INFASSOC.SIC no layout oficial,
-   confere linha por linha, registra o envio e devolve o protocolo. "Ver o arquivo antes" mostra as
-   primeiras linhas e explica os campos.
-
-Os **avisos** (débito acima do limite, perto do limite, vencidos há mais de 90 dias, sem compra há 6
-meses) são informativos: não pedem decisão e não impedem o envio. Para quem usa, o envio tem três
-situações: Em preparação, Pronta, Enviada. Os sete estados do desenho original continuam gravados no
-histórico interno.
-
-## Consultar cliente
-
-Busca por nome ou CNPJ (ou os 8 primeiros dígitos de uma empresa que não é cliente). A ficha mostra a
-posição conosco (limite, débito, vencido) e, ao consultar a Credinfar, quatro números (avaliação de A a
-E, quanto deve no mercado, quanto está vencido, ocorrências), o balanço mais recente e uma
-**recomendação** com os motivos: pode liberar, manter e acompanhar, rever o limite, ou restringir e
-cobrar. Regras fixas em `src/engine/recomendacao.ts`, sem IA. "Ver detalhes" abre fornecedores que
-informam (até 10, sem identificação), últimos 12 meses, balanços e a resposta técnica em XML.
-
-O limite mensal de consultas (1,5 vez o que foi enviado no mês anterior) aparece como um contador.
-
-## O que o motor garante (igual à primeira versão)
-
-- **Arquivo INFASSOC.SIC no layout oficial** da Credinfar (`LAYOUT CREDINFAR.pdf`): 30 campos, 270
-  posições, datas MMAAAA, valores inteiros sem centavos, nada em branco nas posições 1 a 20 nem a
-  partir da 121, linhas separadas por CRLF. `src/engine/infassoc.ts`.
-- **Regras de conferência** em `src/engine/regras.ts`: quatro travam o envio, quatro são aviso.
+- **INFASSOC.SIC no layout oficial** (`LAYOUT CREDINFAR.pdf`): 30 campos, 270 posições, datas MMAAAA,
+  valores inteiros, nada em branco nas posições 1 a 20 nem a partir da 121, CRLF. `src/engine/infassoc.ts`.
+- **Conferência do envio** (`src/engine/regras.ts`): quatro travas e quatro avisos.
 - **API Credinfar simulada** conforme o Manual Técnico V1.4 (`src/engine/credinfarMock.ts`): consulta
   por raiz de CNPJ, XML `dbCredinfar` com os 26 blocos e os nomes originais das tags, dados de ontem
-  (D-1), fornecedores sem identificação, três balanços ou nenhum, recusa por IP não cadastrado, por
-  limite mensal atingido e por chave de acesso ausente (simuláveis em Configurações).
+  (D-1), até 10 fornecedores sem identificação, três balanços ou nenhum, alerta da lista semanal de
+  Performance, recusa por IP, por limite mensal e por chave de acesso.
 - **Histórico** de tudo: quem, quando, o quê, antes e depois.
 
 ## Roteiro de demonstração (5 minutos)
 
-1. **Envio do mês**: a carteira de 3.000 clientes chegou e alguns travaram. Corrija a Farmácia Boa Vida
-   ("Usar o valor do ERP") e a Drogaria Horizonte (CNPJ válido, por exemplo 61.412.110/0001-55). Tire os
-   demais do envio. A tela passa sozinha para "Tudo pronto para enviar".
-2. "Ver o arquivo antes", "Entender os campos da 1ª linha", depois "Gerar arquivo e enviar": protocolo
-   e quantas consultas o envio dá direito no mês seguinte.
-3. **Consultar cliente**: busque "Cosmetika", "Consultar na Credinfar": recomendação, avaliação, mercado.
-   Abra "Ver detalhes" para mostrar o XML no formato do manual.
-4. **Configurações → Modo demonstração**: "Simular IP não cadastrado", volte à consulta e mostre a
-   recusa em linguagem simples. Restaure.
-5. **Histórico**: envios, consultas e "Quem fez o quê", com exportação para Excel.
+1. **Hoje**: leia um cartão de risco em voz alta (o que aconteceu, por quê, quanto está em jogo) e
+   clique em "Reduzir limite de X para Y". Mostre um de "Vender mais" e aumente o limite. Mostre um de
+   cobrança "Paga os outros em dia e atrasa com a gente" e registre a ligação com a promessa.
+2. **Clientes**: busque "VetPrime", "Consultar a Credinfar agora": nota E, 45% vencido no mercado,
+   tabela com a gente x no mercado. "Ver detalhes" mostra o XML do manual.
+3. **Envio do mês**: corrija a Farmácia Boa Vida ("Usar o valor do ERP"), o CNPJ da Drogaria Horizonte
+   (61.412.110/0001-55), tire os demais, "Ver o arquivo antes", "Gerar arquivo e enviar".
+4. **Histórico**: as decisões, a cobrança e o envio com nome e hora.
 
 ## Rodar, testar e publicar
 
@@ -72,28 +83,30 @@ O limite mensal de consultas (1,5 vez o que foi enviado no mês anterior) aparec
 npm install
 npm run dev          # http://localhost:3003
 npm run build        # tsc && vite build
-npm run testar       # 63 verificações do motor (CNPJ, layout 270, regras, envio em um passo, API simulada)
-npm run testar:e2e   # smoke no navegador (exige npm run dev na 3003); capturas em scripts/shots
+npm run testar       # 73 verificações do motor (layout 270, regras, envio, API simulada, decisões)
+npm run testar:e2e   # 21 verificações no navegador (exige npm run dev na 3003)
 pac code push --environment <url do ambiente>
 ```
 
-Publicado no ambiente de desenvolvimento como "Credinfar Action Hub" (`power.config.json`). Solution
-própria **CFSCredinfarHub** (publisher `cfscredinfar`, prefixo `cdf`), sem tabelas nesta fase
-(`scripts/gera-solution.py`). Como nos outros Code Apps criados pelo `pac code push`, o app só entra na
-solution pelo portal: Soluções → CFSCredinfarHub → Adicionar existente → Aplicativo.
+Solution própria **CFSCredinfarHub** (publisher `cfscredinfar`, prefixo `cdf`), sem tabelas nesta fase.
+O app só entra na solution pelo portal (Soluções → CFSCredinfarHub → Adicionar existente → Aplicativo).
 
 ## Limites do protótipo e próximos passos
 
-- Os dados ficam no navegador de quem usa. Próximo passo: tabelas na base de dados da solução (envio,
-  cliente, pendência, consulta, histórico) para uso compartilhado.
-- A API Credinfar é simulada. Para ligar de verdade: chave de acesso com termo de responsabilidade, IP
-  público fixo cadastrado, endereço de produção e um conector que faça a consulta e guarde o XML.
-- A carteira hoje vem de um botão (simulação do ERP) ou de um CSV. Em produção, o ERP entrega o lote.
-- Pontos a confirmar com a Credinfar estão em Configurações → Ajuda. O principal é a regra do limite
-  mensal de consultas (registros enviados ou número de clientes).
+- Dados no navegador de quem usa. Próximo passo: tabelas na base de dados da solução (cliente, leitura
+  mensal, decisão, envio, histórico) para uso compartilhado e para comparar um mês com o outro de verdade.
+- API simulada. Para ligar: chave de acesso com termo de responsabilidade, IP público fixo cadastrado,
+  endereço de produção e uma rotina agendada (madrugada, dados D-1) que faça a leitura e guarde o XML.
+- As decisões de limite e bloqueio ficam no app. Em produção seguem para o ERP (SAP) por integração.
+- A carteira vem de um botão (simulação do ERP) ou CSV. Em produção o ERP entrega o lote.
+- Os cortes das regras (R$ 50 mil, 25%, 82% do limite) são parâmetros a calibrar com Crédito e Cobrança.
+- A confirmar com a Credinfar: regra do limite mensal (registros ou clientes), esquema oficial do XML,
+  validação de um arquivo INFASSOC.SIC de teste.
 
 ## Fontes
 
 Documento Mestre Consolidado (16/09/2026), Manual Técnico da API Web Credinfar V1.4 (07/2025), material
-"Regras da API de Consultas" e o layout oficial do INFASSOC.SIC. Os documentos do cliente não fazem
+"Regras da API de Consultas", layout oficial do INFASSOC.SIC e o site da Credinfar (ferramentas:
+FIC, Risk Rating, Sugestão de Limite, Histórico de Débitos, Avaliação de Performance; relatórios:
+Rating de Carteira, DSO, Inadimplência, Alertas de Comportamento). Os documentos do cliente não fazem
 parte deste repositório.

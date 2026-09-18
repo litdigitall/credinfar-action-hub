@@ -8,7 +8,8 @@ import { consultarCredinfar, LIMITE_FONTES_NEGOCIAIS, limiteQuota } from "../src
 import { cnpjValido, montarCnpj } from "../src/engine/util";
 import { estadoInicial, gerarClientes, parametrosIniciais } from "../src/data/seed";
 import { aprovarRemessa, consultar, enviarRemessa, enviarTudo, gerarArquivoRemessa, podeAprovar, receberRemessa, resolverAcao, statusSimples } from "../src/services/estado";
-import { recomendar } from "../src/engine/recomendacao";
+import { avaliar, lerCarteira, RESERVA_CONSULTAS } from "../src/engine/sinais";
+import { atualizarCarteira, registrarDecisao } from "../src/services/estado";
 
 let falhas = 0;
 const check = (cond: boolean, msg: string) => {
@@ -130,10 +131,38 @@ const tk = consultarCredinfar("27100900", { ...p, token: "" }, clientes, 0);
 check(tk.resultado === "TOKEN_INVALIDO" && tk.httpStatus === 401, "sem token: 401");
 const fora = consultarCredinfar("61412110", p, clientes, 0);
 check(fora.resultado === "OK" || fora.resultado === "SEM_DADOS", `CNPJ fora da carteira responde (${fora.resultado})`);
-const rec = recomendar(ok.ficha!, clientes.find((c) => c.id === "C000004")!);
-check(rec.titulo.length > 0 && rec.motivos.length > 0 && ["ok", "aviso", "erro"].includes(rec.tom), `recomendação em linguagem simples: "${rec.titulo}"`);
+const lei = avaliar(clientes.find((c) => c.id === "C000004")!, ok.ficha!);
+check(lei.titulo.length > 0 && lei.porque.length > 0 && ["verde", "amarelo", "vermelho"].includes(lei.cor), `leitura em linguagem simples: "${lei.titulo}"`);
 const eq = consultar(e0, "27100900", "teste");
 check(eq.estado.consultas.length === e0.consultas.length + 1 && eq.consulta.resultado === "OK" && eq.estado.auditoria[0].acao === "Consulta Credinfar", "consulta pelo estado registra histórico, quota e auditoria");
+
+// 6) Do dado à decisão: leitura da carteira, sinais e registro da decisão
+const eS = estadoInicial();
+const porTipo = (t: string) => eS.sinais.filter((x) => x.tipo === t).length;
+check(eS.sinais.length > 0 && eS.varredura !== null, `leitura inicial: ${eS.sinais.length} decisões (${porTipo("RISCO")} risco, ${porTipo("COBRANCA")} cobrança, ${porTipo("OPORTUNIDADE")} oportunidade), ${eS.varredura?.consultados} clientes consultados`);
+check(eS.parametros.consultasNoMes + RESERVA_CONSULTAS <= limiteQuota(eS.parametros), "a leitura respeita o limite do mês e guarda a reserva do dia a dia");
+check(eS.sinais.every((x) => x.porque.length > 0 && x.opcoes.length > 0 && x.titulo.length > 0), "todo cartão tem motivo e pelo menos uma ação");
+const semCota = lerCarteira(eS.clientes, { ...eS.parametros, consultasNoMes: limiteQuota(eS.parametros) }, limiteQuota(eS.parametros));
+check(semCota.consultados === 0 && semCota.semQuota > 0, "sem consultas disponíveis, a leitura não gasta nada e avisa quem ficou de fora");
+const ipRuim = lerCarteira(eS.clientes.slice(0, 5), { ...eS.parametros, ipSaida: "1.2.3.4" }, 0);
+check(ipRuim.erro !== undefined, "IP não cadastrado interrompe a leitura com mensagem clara");
+const alvo = eS.sinais.find((x) => x.opcoes.some((o) => o.acao === "AJUSTAR_LIMITE" && o.novoLimite))!;
+const opLim = alvo.opcoes.find((o) => o.acao === "AJUSTAR_LIMITE")!;
+const eD = registrarDecisao(eS, alvo.clienteId, opLim, {}, "teste");
+check(eD.clientes.find((c) => c.id === alvo.clienteId)!.limite === opLim.novoLimite, `decisão aplica o novo limite (${opLim.rotulo})`);
+check(eD.sinais.find((x) => x.id === alvo.id)!.status === "DECIDIDO" && eD.auditoria[0].acao === "Decisão de crédito", "cartão sai da lista e a decisão fica no histórico");
+const eR = atualizarCarteira(eD, "teste");
+check(!eR.erro && !eR.estado.sinais.some((x) => x.id === alvo.id && x.status === "ABERTO"), "nova leitura não reabre o que já foi decidido");
+const cob = eS.sinais.find((x) => x.tipo === "COBRANCA");
+if (cob) {
+  const eC = registrarDecisao(eS, cob.clienteId, cob.opcoes[0], { nota: "Falei com o financeiro", promessaEm: "2026-09-25" }, "teste");
+  check(eC.auditoria[0].acao === "Cobrança registrada" && eC.auditoria[0].detalhe.includes("25/09/2026"), "cobrança registra o contato e a promessa de pagamento");
+}
+const gr = eS.sinais.find((x) => x.opcoes.some((o) => o.acao === "BLOQUEAR_VENDAS"));
+if (gr) {
+  const eB = registrarDecisao(eS, gr.clienteId, gr.opcoes.find((o) => o.acao === "BLOQUEAR_VENDAS")!, {}, "teste");
+  check(eB.clientes.find((c) => c.id === gr.clienteId)!.bloqueado === true, "segurar vendas marca o cliente");
+}
 
 console.log(falhas === 0 ? "\nMotor: todos os cenários passaram." : `\nMotor: ${falhas} falha(s).`);
 process.exit(falhas === 0 ? 0 : 1);

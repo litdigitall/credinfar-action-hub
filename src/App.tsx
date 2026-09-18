@@ -1,39 +1,43 @@
-// Credinfar Action Hub (versão simples): o trabalho tem três momentos.
-//   1. Enviar     → carteira do mês: receber, corrigir o que travou, enviar
-//   2. Consultar  → ficha do cliente na Credinfar, com recomendação
-//   3. Acompanhar → histórico de envios, consultas e atividades
-// O motor (regras, layout oficial do arquivo, simulação da API) é o mesmo.
+// Credinfar Action Hub: do dado à decisão.
+//   Hoje        → lista curta de decisões (risco, cobrança, vender mais), priorizada por valor
+//   Clientes    → posição conosco x mercado, com as ações no mesmo lugar
+//   Envio do mês → receber a carteira, corrigir o que travou, enviar
+//   Histórico   → envios, consultas e quem decidiu o quê
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { Icon } from "@tabler/icons-react";
-import { IconHistory, IconMenu2, IconSearch, IconSend, IconSettings, IconShieldCheck } from "@tabler/icons-react";
-import type { Cliente, DecisaoAcao, EstadoHub, Parametros, Remessa } from "./models/types";
+import { IconHistory, IconInbox, IconMenu2, IconSearch, IconSend, IconSettings, IconShieldCheck } from "@tabler/icons-react";
+import type { Cliente, DecisaoAcao, EstadoHub, OpcaoAcao, Parametros, Remessa } from "./models/types";
 import type { RespostaCredinfar } from "./engine/credinfarMock";
+import type { ExtrasDecisao } from "./services/estado";
 import {
+  atualizarCarteira,
   atualizarParametros,
   carregarEstado,
   consultar,
   enviarTudo,
+  liberarCliente,
   metricas as calcularMetricas,
   receberRemessa,
+  registrarDecisao,
   reiniciarEstado,
   remessaCorrente,
   resolverAcao,
   salvarEstado,
-  statusSimples,
 } from "./services/estado";
 import { usePowerPlatform, usuarioAtual } from "./services/PowerProvider";
 import { tema } from "./theme/tema";
-import { Chip } from "./components/ui";
 import { Envio } from "./screens/Envio";
-import { Consulta } from "./screens/Consulta";
+import { Hoje } from "./screens/Hoje";
+import { Clientes } from "./screens/Clientes";
 import { Historico } from "./screens/Historico";
 import { Configuracoes } from "./screens/Configuracoes";
 
-export type Aba = "envio" | "consulta" | "historico" | "config";
+export type Aba = "hoje" | "clientes" | "envio" | "historico" | "config";
 const TITULOS: Record<Aba, string> = {
+  hoje: "Hoje",
+  clientes: "Clientes",
   envio: "Envio do mês",
-  consulta: "Consultar cliente",
   historico: "Histórico",
   config: "Configurações",
 };
@@ -53,7 +57,10 @@ export interface Hub {
   remessaAtual: Remessa | undefined;
   clienteFoco: string | null; // cliente aberto na Consulta (mantido ao trocar de tela)
   focarCliente: (id: string | null) => void;
-  verCliente: (id: string) => void; // foca o cliente e abre a Consulta
+  verCliente: (id: string) => void; // foca o cliente e abre a tela Clientes
+  decidir: (clienteId: string, opcao: OpcaoAcao, extras: ExtrasDecisao) => void;
+  liberar: (clienteId: string) => void;
+  atualizarLeitura: () => void;
   receber: (origem: "ERP" | "Arquivo", clientes?: Cliente[]) => void;
   resolver: (acaoId: string, decisao: DecisaoAcao, justificativa: string, alteracoes: Record<string, number | string>) => void;
   enviar: (remessaId: string) => void;
@@ -72,7 +79,7 @@ export function useHub(): Hub {
 export function App() {
   const pronto = usePowerPlatform();
   const [estado, setEstado] = useState<EstadoHub | null>(null);
-  const [aba, setAba] = useState<Aba>("envio");
+  const [aba, setAba] = useState<Aba>("hoje");
   const [menuAberto, setMenuAberto] = useState(false);
   const [aviso, setAviso] = useState<AvisoUi | null>(null);
   const [clienteFoco, setClienteFoco] = useState<string | null>(null);
@@ -150,23 +157,43 @@ export function App() {
     },
     [usuario]
   );
+  const decidir = useCallback(
+    (clienteId: string, opcao: OpcaoAcao, extras: ExtrasDecisao) => {
+      setEstado((e) => (e ? registrarDecisao(e, clienteId, opcao, extras, usuario) : e));
+      setAviso({ tipo: "ok", texto: "Decisão registrada. Ela fica no histórico com o seu nome." });
+    },
+    [usuario]
+  );
+  const liberar = useCallback(
+    (clienteId: string) => {
+      setEstado((e) => (e ? liberarCliente(e, clienteId, usuario) : e));
+      setAviso({ tipo: "ok", texto: "Vendas a prazo liberadas novamente." });
+    },
+    [usuario]
+  );
+  const atualizarLeitura = useCallback(() => {
+    if (!estado) return;
+    const r = atualizarCarteira(estado, usuario);
+    setEstado(r.estado);
+    setAviso(r.erro ? { tipo: "erro", texto: r.erro } : { tipo: "ok", texto: r.consultados === 0 ? "Sem consultas disponíveis neste mês para uma nova leitura. A lista atual continua valendo." : `Carteira atualizada: ${r.consultados.toLocaleString("pt-BR")} clientes consultados, ${r.novos} pedem decisão.` });
+  }, [estado, usuario]);
   const reiniciar = useCallback(() => {
     setEstado(reiniciarEstado());
     setClienteFoco(null);
-    setAba("envio");
+    setAba("hoje");
     setAviso({ tipo: "ok", texto: "Demonstração reiniciada com a carteira original." });
   }, []);
   const verCliente = useCallback((id: string) => {
     setClienteFoco(id);
-    setAba("consulta");
+    setAba("clientes");
   }, []);
 
   const hub = useMemo<Hub | null>(
     () =>
       estado
-        ? { estado, usuario, aba, setAba, avisar, metricas: calcularMetricas(estado), remessaAtual: remessaCorrente(estado), clienteFoco, focarCliente: setClienteFoco, verCliente, receber, resolver, enviar, consultarCredinfar, salvarParametros, reiniciar }
+        ? { estado, usuario, aba, setAba, avisar, metricas: calcularMetricas(estado), remessaAtual: remessaCorrente(estado), clienteFoco, focarCliente: setClienteFoco, verCliente, decidir, liberar, atualizarLeitura, receber, resolver, enviar, consultarCredinfar, salvarParametros, reiniciar }
         : null,
-    [estado, usuario, aba, avisar, clienteFoco, verCliente, receber, resolver, enviar, consultarCredinfar, salvarParametros, reiniciar]
+    [estado, usuario, aba, avisar, clienteFoco, verCliente, decidir, liberar, atualizarLeitura, receber, resolver, enviar, consultarCredinfar, salvarParametros, reiniciar]
   );
 
   if (!hub || !estado) {
@@ -201,8 +228,9 @@ export function App() {
             </div>
           )}
           <main className="content">
+            {aba === "hoje" && <Hoje />}
+            {aba === "clientes" && <Clientes />}
             {aba === "envio" && <Envio />}
-            {aba === "consulta" && <Consulta />}
             {aba === "historico" && <Historico />}
             {aba === "config" && <Configuracoes />}
           </main>
@@ -228,8 +256,9 @@ function Sidebar({ aba, aberto, onMudar, travados }: { aba: Aba; aberto: boolean
       </div>
 
       <div style={navSectionStyle}>O que você quer fazer</div>
+      <NavItem icone={IconInbox} rotulo="Hoje" ativa={aba === "hoje"} onClick={() => onMudar("hoje")} />
+      <NavItem icone={IconSearch} rotulo="Clientes" ativa={aba === "clientes"} onClick={() => onMudar("clientes")} />
       <NavItem icone={IconSend} rotulo="Envio do mês" ativa={aba === "envio"} badge={travados} onClick={() => onMudar("envio")} />
-      <NavItem icone={IconSearch} rotulo="Consultar cliente" ativa={aba === "consulta"} onClick={() => onMudar("consulta")} />
       <NavItem icone={IconHistory} rotulo="Histórico" ativa={aba === "historico"} onClick={() => onMudar("historico")} />
 
       <div style={{ marginTop: "auto" }}>
@@ -255,15 +284,13 @@ function NavItem({ icone: Icone, rotulo, ativa, badge, onClick }: { icone: Icon;
     >
       <Icone size={20} stroke={1.7} />
       <span style={{ flex: 1 }}>{rotulo}</span>
-      {(badge ?? 0) > 0 && <span title="clientes travados" style={{ background: tema.danger, color: "#fff", borderRadius: 999, fontSize: 11, fontWeight: 700, padding: "1px 8px" }}>{badge}</span>}
+      {(badge ?? 0) > 0 && <span style={{ background: tema.danger, color: "#fff", borderRadius: 999, fontSize: 11, fontWeight: 700, padding: "1px 8px" }}>{badge}</span>}
     </button>
   );
 }
 
 function TopBar({ aba, onMenu }: { aba: Aba; onMenu: () => void }) {
-  const { estado, remessaAtual } = useHub();
-  const s = remessaAtual ? statusSimples(remessaAtual) : null;
-  const cor = s === "Enviada" ? [tema.ok, tema.okBg] : s === "Pronta" ? [tema.blueDark, tema.blueSoft] : [tema.amber, tema.amberBg];
+  const { estado } = useHub();
   return (
     <header style={{ minHeight: 62, background: "rgba(255,255,255,0.9)", backdropFilter: "blur(8px)", borderBottom: `1px solid ${tema.line}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "8px 20px", position: "sticky", top: 0, zIndex: 10, flexWrap: "wrap" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
@@ -274,7 +301,6 @@ function TopBar({ aba, onMenu }: { aba: Aba; onMenu: () => void }) {
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         <span style={chip}>Mês {estado.parametros.competencia}</span>
-        {s && <Chip texto={`Envio: ${s}`} fg={cor[0]} bg={cor[1]} />}
         <span style={{ fontSize: 11.5, fontWeight: 700, background: tema.amberBg, color: tema.amber, borderRadius: 999, padding: "3px 10px" }}>PROTÓTIPO · DADOS SIMULADOS</span>
         <div className="usuarioTopo" style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Avatar tamanho={34} />

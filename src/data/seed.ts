@@ -5,9 +5,10 @@
 // bloqueios).
 import type { Acao, Cliente, Consulta, EstadoHub, Parametros, RegistroAuditoria, Remessa, Segmento } from "../models/types";
 import { ajustarSequenciaAcao, resumoValidacao, validarRemessa } from "../engine/regras";
+import { lerCarteira } from "../engine/sinais";
 import { montarCnpj, prng, hashCurto } from "../engine/util";
 
-export const VERSAO_ESTADO = 5;
+export const VERSAO_ESTADO = 6;
 export const TOTAL_CLIENTES = 3000;
 
 const CIDADES: { cidade: string; uf: string; cep: string }[] = [
@@ -191,7 +192,7 @@ export function parametrosIniciais(): Parametros {
     ipCadastrado: "200.155.10.42",
     ipSaida: "200.155.10.42",
     registrosMesAnterior: 2982,
-    consultasNoMes: 1204,
+    consultasNoMes: 204,
     competencia: "09/2026",
     diaEnvio: 8,
     criterioQuota: "registros",
@@ -272,8 +273,15 @@ export function estadoInicial(): EstadoHub {
     { id: "CON-0001", em: new Date(2026, 8, 3, 10, 38).toISOString(), usuario: "Leonardo", cnpjRaiz: "27100900", clienteId: "C000004", resultado: "OK", duracaoMs: 812, bytes: 38210, balancos: 3, correlationId: "CRH-CON-0001", ipOrigem: parametros.ipSaida },
     { id: "CON-0002", em: new Date(2026, 8, 9, 15, 2).toISOString(), usuario: "Leonardo", cnpjRaiz: "09021552", clienteId: "C000005", resultado: "OK", duracaoMs: 655, bytes: 29870, balancos: 3, correlationId: "CRH-CON-0002", ipOrigem: parametros.ipSaida },
   ];
+  // Leitura mensal da carteira já feita (rotina da madrugada, dados de ontem)
+  const leitura = lerCarteira(clientes, parametros, parametros.consultasNoMes, new Date());
+  const leituraEm = new Date(new Date().setHours(6, 10, 0, 0)).toISOString();
+  parametros.consultasNoMes += leitura.consultados;
+  auditoria.unshift({ id: "AUD-0004", em: leituraEm, usuario: "Rotina mensal", acao: "Carteira atualizada na Credinfar", objeto: "Carteira", detalhe: `${leitura.consultados.toLocaleString("pt-BR")} clientes consultados; ${leitura.sinais.length} pedem decisão.` });
   return {
     versao: VERSAO_ESTADO,
+    sinais: leitura.sinais,
+    varredura: { em: leituraEm, consultados: leitura.consultados, semQuota: leitura.semQuota, porNota: leitura.porNota },
     clientes,
     remessas: [
       remessa,

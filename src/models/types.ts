@@ -51,6 +51,8 @@ export interface Cliente {
   cnae: string;
   naturezaJuridica: string;
   grupoEconomico: string;
+  bloqueado?: boolean; // novas vendas a prazo seguradas por decisão de crédito
+  condicao?: string; // ex.: garantia ou pagamento antecipado
 }
 
 // Estados do workflow da remessa (Documento Mestre §11.3)
@@ -213,6 +215,37 @@ export interface Consulta {
   ipOrigem: string;
 }
 
+// Decisões de crédito e cobrança (o que a leitura da Credinfar pede de ação)
+export type TipoSinal = "RISCO" | "COBRANCA" | "OPORTUNIDADE";
+export type CodigoSinal = "RISCO_GRAVE" | "RISCO_SUBINDO" | "ATRASA_COM_TODOS" | "ATRASA_SO_CONOSCO" | "PODE_VENDER_MAIS";
+export type AcaoDecisao = "AJUSTAR_LIMITE" | "PEDIR_GARANTIA" | "BLOQUEAR_VENDAS" | "REGISTRAR_CONTATO" | "ACOMPANHAR";
+export interface OpcaoAcao {
+  acao: AcaoDecisao;
+  rotulo: string;
+  novoLimite?: number;
+}
+export interface Sinal {
+  id: string;
+  clienteId: string;
+  tipo: TipoSinal;
+  codigo: CodigoSinal;
+  cor: "verde" | "amarelo" | "vermelho";
+  titulo: string;
+  porque: string[];
+  valorEmJogo: number;
+  opcoes: OpcaoAcao[];
+  nota: string; // avaliação da Credinfar na leitura
+  criadoEm: string;
+  status: "ABERTO" | "DECIDIDO";
+  decisao?: { acao: AcaoDecisao; rotulo: string; detalhe: string; usuario: string; em: string };
+}
+export interface Varredura {
+  em: string;
+  consultados: number;
+  semQuota: number;
+  porNota: Record<string, { clientes: number; debito: number }>;
+}
+
 export interface RegistroAuditoria {
   id: string;
   em: string;
@@ -247,6 +280,8 @@ export interface EstadoHub {
   acoes: Acao[];
   consultas: Consulta[];
   auditoria: RegistroAuditoria[];
+  sinais: Sinal[];
+  varredura: Varredura | null;
   parametros: Parametros;
   atualizadoEm: string;
 }

@@ -3,6 +3,8 @@
 // evolução natural (ver docs/README.md).
 import type {
   Acao,
+  OpcaoAcao,
+  Sinal,
   Cliente,
   Consulta,
   DecisaoAcao,
@@ -16,7 +18,8 @@ import { ROTULO_DECISAO } from "../models/types";
 import { consultarCredinfar, type RespostaCredinfar } from "../engine/credinfarMock";
 import { gerarInfassoc } from "../engine/infassoc";
 import { ajustarSequenciaAcao, resumoValidacao, validarRemessa } from "../engine/regras";
-import { correlationId, hashCurto, raizCnpj } from "../engine/util";
+import { lerCarteira } from "../engine/sinais";
+import { brlInt, correlationId, hashCurto, raizCnpj } from "../engine/util";
 import { estadoInicial, VERSAO_ESTADO } from "../data/seed";
 
 const CHAVE = "credinfar-action-hub:estado";
@@ -406,6 +409,7 @@ export function metricas(e: EstadoHub) {
     proximoEnvio,
     quotaLimite: Math.floor(e.parametros.registrosMesAnterior * 1.5),
     quotaUsada: consultasNoCiclo(e),
+    decisoesAbertas: e.sinais.filter((x) => x.status === "ABERTO").length,
   };
 }
 
@@ -435,4 +439,68 @@ export function enviarTudo(e: EstadoHub, remessaId: string, usuario: string): { 
   const s = enviarRemessa(g.estado, remessaId, usuario);
   if (s.erro) return { estado: g.estado, erro: s.erro };
   return { estado: s.estado, conteudo: g.conteudo };
+}
+
+// ---------------------------------------------------------------- do dado à decisão
+// Leitura mensal da carteira na Credinfar: consulta os clientes de maior débito
+// dentro do limite do mês (guardando uma reserva para o dia a dia) e monta a
+// lista de decisões. Decisões já tomadas neste mês não voltam para a lista.
+export function atualizarCarteira(e: EstadoHub, usuario: string): { estado: EstadoHub; erro?: string; consultados: number; novos: number } {
+  const r = lerCarteira(e.clientes, e.parametros, consultasNoCiclo(e));
+  if (r.erro) return { estado: e, erro: r.erro, consultados: 0, novos: 0 };
+  const decididos = e.sinais.filter((x) => x.status === "DECIDIDO");
+  const jaDecidido = new Set(decididos.map((x) => x.id));
+  const abertos = r.sinais.filter((x) => !jaDecidido.has(x.id));
+  let estado: EstadoHub = {
+    ...e,
+    sinais: [...abertos, ...decididos],
+    varredura: { em: agoraIso(), consultados: r.consultados, semQuota: r.semQuota, porNota: r.porNota },
+    parametros: { ...e.parametros, consultasNoMes: e.parametros.consultasNoMes + r.consultados },
+  };
+  estado = comAuditoria(estado, auditar(estado, usuario, "Carteira atualizada na Credinfar", "Carteira", `${r.consultados.toLocaleString("pt-BR")} clientes consultados; ${abertos.length} pedem decisão${r.semQuota ? `; ${r.semQuota} ficaram de fora pelo limite do mês` : ""}.`));
+  return { estado, consultados: r.consultados, novos: abertos.length };
+}
+
+export interface ExtrasDecisao {
+  novoLimite?: number;
+  nota?: string;
+  promessaEm?: string; // AAAA-MM-DD
+}
+
+// Registra a decisão, aplica o efeito no cliente e tira o cartão da lista.
+export function registrarDecisao(e: EstadoHub, clienteId: string, opcao: OpcaoAcao, extras: ExtrasDecisao, usuario: string): EstadoHub {
+  const c = clienteDe(e, clienteId);
+  if (!c) return e;
+  let novo: Cliente = c;
+  let detalhe = opcao.rotulo;
+  let acaoAud = "Decisão de crédito";
+  if (opcao.acao === "AJUSTAR_LIMITE") {
+    const limite = Math.max(0, Math.round(extras.novoLimite ?? opcao.novoLimite ?? c.limite));
+    detalhe = `Limite de ${brlInt(c.limite)} para ${brlInt(limite)}`;
+    novo = { ...c, limite };
+  } else if (opcao.acao === "PEDIR_GARANTIA") {
+    detalhe = "Novas vendas só com garantia ou pagamento antecipado";
+    novo = { ...c, condicao: "Garantia ou pagamento antecipado" };
+  } else if (opcao.acao === "BLOQUEAR_VENDAS") {
+    detalhe = "Novas vendas a prazo seguradas";
+    novo = { ...c, bloqueado: true };
+  } else if (opcao.acao === "REGISTRAR_CONTATO") {
+    acaoAud = "Cobrança registrada";
+    detalhe = `Contato de cobrança${extras.promessaEm ? `, prometeu pagar em ${extras.promessaEm.split("-").reverse().join("/")}` : ""}`;
+  } else {
+    detalhe = "Sem mudança: só acompanhar";
+  }
+  if (extras.nota) detalhe += `. ${extras.nota}`;
+  const em = agoraIso();
+  const sinais: Sinal[] = e.sinais.map((x) => (x.clienteId === clienteId && x.status === "ABERTO" ? { ...x, status: "DECIDIDO", decisao: { acao: opcao.acao, rotulo: opcao.rotulo, detalhe, usuario, em } } : x));
+  const estado: EstadoHub = { ...e, clientes: e.clientes.map((x) => (x.id === clienteId ? novo : x)), sinais };
+  return comAuditoria(estado, auditar(estado, usuario, acaoAud, c.nome, `${detalhe}.`));
+}
+
+// Desfaz o bloqueio ou a condição especial do cliente
+export function liberarCliente(e: EstadoHub, clienteId: string, usuario: string): EstadoHub {
+  const c = clienteDe(e, clienteId);
+  if (!c) return e;
+  const estado: EstadoHub = { ...e, clientes: e.clientes.map((x) => (x.id === clienteId ? { ...x, bloqueado: false, condicao: undefined } : x)) };
+  return comAuditoria(estado, auditar(estado, usuario, "Decisão de crédito", c.nome, "Vendas a prazo liberadas novamente."));
 }
