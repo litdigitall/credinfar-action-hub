@@ -6,6 +6,11 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   base: "./",
   plugins: [react()],
+  build: {
+    // Imagens pequenas (logo Abbott) entram no bundle como data URI: dentro do
+    // player do Power Apps, um arquivo .png separado não é servido para o <img>.
+    assetsInlineLimit: 16384,
+  },
   server: {
     port: 3003,
     strictPort: true,
