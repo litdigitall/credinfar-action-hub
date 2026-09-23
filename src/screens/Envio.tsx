@@ -3,7 +3,7 @@
 // Só aparece o que impede o envio. Cada cliente travado tem duas saídas:
 // Corrigir ou Tirar do envio. Os avisos são informativos, sem decisão.
 import { useMemo, useRef, useState } from "react";
-import { IconCheck, IconDownload, IconFileTypeTxt, IconSend, IconUpload } from "@tabler/icons-react";
+import { IconCircleCheck, IconDownload, IconFileTypeTxt, IconSend, IconUpload } from "@tabler/icons-react";
 import { useHub } from "../App";
 import { Botao } from "../components/Botao";
 import { Aviso, Campo, Codigo, Modal, inputStyle } from "../components/ui";
@@ -13,7 +13,7 @@ import { brlInt, cnpjValido, formatarCnpj, soDigitos } from "../engine/util";
 import { lerCarteiraCsv, MODELO_CSV } from "../services/arquivoCarteira";
 import { conteudoArquivo, statusSimples } from "../services/estado";
 import type { Acao, Cliente, CodigoAcao } from "../models/types";
-import { cardStyle, tema } from "../theme/tema";
+import { tema } from "../theme/tema";
 
 const ROTULO_AVISO: Partial<Record<CodigoAcao, string>> = {
   EXPOSICAO_ACIMA_LIMITE: "Débito acima do limite",
@@ -67,38 +67,38 @@ export function Envio() {
 
   return (
     <>
-      <div style={{ ...cardStyle, marginBottom: 18 }}>
+      <div className="card anim-subir" style={{ marginBottom: 18 }}>
         <Passos atual={passo} />
       </div>
 
       {r && passo !== 4 && (
-        <div style={{ fontSize: 14.5, color: tema.ink, margin: "0 2px 18px" }}>
+        <p className="lead anim-subir" style={{ margin: "0 2px 18px", color: tema.ink }}>
           <b>{fmtInt(noEnvio)} clientes</b> neste envio, {brlExec(m.carteira)} de débito informado.{" "}
           {travados.length > 0 ? <b style={{ color: tema.danger }}>{fmtInt(travados.length)} travado(s).</b> : <b style={{ color: tema.ok }}>Nada impede o envio.</b>}
           {r.excluidos.length > 0 ? ` ${fmtInt(r.excluidos.length)} tirado(s) deste envio.` : ""}
-        </div>
+        </p>
       )}
 
-      {/* ------------------------------------------------ Passo 1 */}
+      {/* ------------------------------------------------ Passo 1 / concluído */}
       {(passo === 1 || passo === 4) && (
         <Section titulo={passo === 4 ? "Envio concluído" : "1. Receber a carteira do mês"}>
           {passo === 4 && r && (
-            <div style={{ ...cardStyle, borderLeft: `4px solid ${tema.ok}`, marginBottom: 12 }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: tema.ok, display: "flex", alignItems: "center", gap: 8 }}>
-                <IconCheck size={20} /> Enviado à Credinfar
+            <div className="hero" style={{ marginBottom: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 20, fontWeight: 800 }}>
+                <IconCircleCheck size={26} /> Enviado à Credinfar
               </div>
-              <div style={{ fontSize: 13.5, color: tema.ink, marginTop: 6, lineHeight: 1.7 }}>
+              <div style={{ fontSize: 14.5, opacity: 0.92, marginTop: 8, lineHeight: 1.7, maxWidth: 720 }}>
                 {fmtInt(r.arquivo?.registros ?? 0)} clientes enviados em {fmtDataHora(r.enviadaEm ?? "")} por {r.enviadaPor}. Protocolo <b>{r.protocolo}</b>.<br />
                 No próximo mês você poderá fazer até <b>{fmtInt(Math.floor((r.arquivo?.registros ?? 0) * 1.5))}</b> consultas à Credinfar (1,5 vez o que foi enviado).
               </div>
-              <div style={{ marginTop: 10 }}>
-                <Botao variante="secundario" tamanho="pequeno" icone={<IconDownload size={15} />} onClick={() => baixar(conteudo, "INFASSOC.SIC", "text/plain")}>
+              <div style={{ marginTop: 14 }}>
+                <Botao variante="claro" tamanho="pequeno" icone={<IconDownload size={15} />} onClick={() => baixar(conteudo, "INFASSOC.SIC", "text/plain")}>
                   Baixar o arquivo enviado
                 </Botao>
               </div>
             </div>
           )}
-          <div style={{ ...cardStyle, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          <div className="card" style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
             <Botao icone={<IconUpload size={16} />} onClick={() => receber("ERP")}>
               {passo === 4 ? "Receber a carteira do próximo envio" : "Receber a carteira do ERP"}
             </Botao>
@@ -116,19 +116,19 @@ export function Envio() {
       {/* ------------------------------------------------ Passo 2 */}
       {r && passo === 2 && (
         <Section titulo={`2. Corrigir o que travou (${fmtInt(travados.length)})`} sub="Estes clientes não cabem no arquivo da Credinfar do jeito que vieram. Corrija ou tire do envio. O resto da carteira já está pronto.">
-          <div className="gridAcoes">
+          <div className="gridAcoes anim-lista">
             {travados.map((a) => {
               const c = clientes.get(a.clienteId);
               return (
-                <article key={a.id} data-testid="travado" style={{ ...cardStyle, borderLeft: `4px solid ${tema.danger}`, display: "flex", flexDirection: "column", gap: 8 }}>
+                <article key={a.id} data-testid="travado" className="card card-hover" style={{ borderLeft: `5px solid ${tema.danger}`, display: "flex", flexDirection: "column", gap: 8 }}>
                   <div>
-                    <div style={{ fontWeight: 800, color: tema.heading, fontSize: 15 }}>{c?.nome || "(sem razão social)"}</div>
-                    <div style={{ fontSize: 12, color: tema.muted }}>{c ? `${formatarCnpj(c.cnpj)} · ${c.cidade || "?"}/${c.uf || "?"}` : ""}</div>
+                    <div style={{ fontWeight: 800, color: tema.heading, fontSize: 15.5, letterSpacing: "-0.01em" }}>{c?.nome || "(sem razão social)"}</div>
+                    <div style={{ fontSize: 12, color: tema.muted, marginTop: 2 }}>{c ? `${formatarCnpj(c.cnpj)} · ${c.cidade || "?"}/${c.uf || "?"}` : ""}</div>
                   </div>
-                  <div style={{ fontSize: 13.5, color: tema.ink }}>
+                  <div style={{ fontSize: 13.5, color: tema.ink, lineHeight: 1.55 }}>
                     <b>{a.mensagem}.</b> {a.detalhe}
                   </div>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
                     <Botao tamanho="pequeno" onClick={() => setCorrigindo(a)}>Corrigir</Botao>
                     <Botao variante="secundario" tamanho="pequeno" onClick={() => setTirando(a)}>Tirar do envio</Botao>
                   </div>
@@ -142,42 +142,43 @@ export function Envio() {
       {/* ------------------------------------------------ Passo 3 */}
       {r && passo === 3 && (
         <Section titulo="3. Enviar à Credinfar">
-          <div style={{ ...cardStyle, borderLeft: `4px solid ${tema.ok}` }}>
-            <div style={{ fontSize: 16, fontWeight: 800, color: tema.heading }}>Tudo pronto para enviar</div>
-            <div style={{ fontSize: 13.5, color: tema.ink, marginTop: 6, lineHeight: 1.7 }}>
+          <div className="hero">
+            <div className="kicker" style={{ color: "rgba(255,255,255,0.75)" }}>Tudo conferido</div>
+            <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.02em", marginTop: 4 }}>Tudo pronto para enviar</div>
+            <div style={{ fontSize: 14.5, opacity: 0.92, marginTop: 8, lineHeight: 1.7, maxWidth: 720 }}>
               {fmtInt(noEnvio)} clientes, {brlInt(m.carteira)} de débito e {brlInt(m.vencido)} vencidos. O app monta o arquivo no layout oficial da Credinfar (270 posições por cliente), confere linha por linha e registra o envio.
             </div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12, alignItems: "center" }}>
-              <Botao icone={<IconSend size={16} />} onClick={() => enviar(r.id)}>Gerar arquivo e enviar</Botao>
-              <Botao variante="secundario" onClick={() => setPrevia((v) => !v)}>{previa ? "Ocultar o arquivo" : "Ver o arquivo antes"}</Botao>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16, alignItems: "center" }}>
+              <Botao icone={<IconSend size={16} />} onClick={() => enviar(r.id)} style={{ boxShadow: "0 10px 26px rgba(0,0,0,0.25)" }}>Gerar arquivo e enviar</Botao>
+              <Botao variante="claro" onClick={() => setPrevia((v) => !v)}>{previa ? "Ocultar o arquivo" : "Ver o arquivo antes"}</Botao>
               {previa && (
-                <Botao variante="link" icone={<IconDownload size={15} />} onClick={() => baixar(conteudo, "INFASSOC.SIC", "text/plain")}>
+                <Botao variante="claro" icone={<IconDownload size={15} />} onClick={() => baixar(conteudo, "INFASSOC.SIC", "text/plain")}>
                   Baixar
                 </Botao>
               )}
             </div>
           </div>
           {previa && linhas.length > 0 && (
-            <div style={{ ...cardStyle, marginTop: 12 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
-                <div style={{ fontWeight: 700, color: tema.heading }}>INFASSOC.SIC · {fmtInt(noEnvio)} linhas de 270 posições (primeiras 3)</div>
+            <div className="card anim-subir" style={{ marginTop: 14 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+                <div style={{ fontWeight: 800, color: tema.heading }}>INFASSOC.SIC · {fmtInt(noEnvio)} linhas de 270 posições (primeiras 3)</div>
                 <Botao variante="link" tamanho="pequeno" onClick={() => setCampos((v) => !v)}>{campos ? "Ocultar os campos" : "Entender os campos da 1ª linha"}</Botao>
               </div>
               <Codigo altura={140}>{linhas.join("\n")}</Codigo>
               {campos && (
-                <div style={{ marginTop: 10, overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
+                <div style={{ marginTop: 12, overflowX: "auto" }}>
+                  <table className="tabela">
                     <thead>
-                      <tr style={{ color: tema.muted, textAlign: "left" }}>
-                        <th style={th}>Campo</th><th style={th}>Posições</th><th style={th}>Valor</th>
+                      <tr>
+                        <th>Campo</th><th>Posições</th><th>Valor</th>
                       </tr>
                     </thead>
                     <tbody>
                       {decomporLinha(linhas[0]).map(({ campo, valor }) => (
                         <tr key={campo.nome} className="linhaFixa">
-                          <td style={td}><b>{campo.descricao}</b></td>
-                          <td style={td}>{String(campo.inicio).padStart(3, "0")} a {String(campo.fim).padStart(3, "0")}</td>
-                          <td style={{ ...td, fontFamily: tema.mono }}>{valor.trim() || "(vazio)"}</td>
+                          <td><b>{campo.descricao}</b></td>
+                          <td className="num">{String(campo.inicio).padStart(3, "0")} a {String(campo.fim).padStart(3, "0")}</td>
+                          <td style={{ fontFamily: tema.mono }}>{valor.trim() || "(vazio)"}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -191,30 +192,29 @@ export function Envio() {
 
       {/* ------------------------------------------------ Avisos (informativos) */}
       {r && passo !== 4 && avisos.length > 0 && (
-        <details style={{ ...cardStyle, marginTop: 6 }}>
-          <summary style={{ cursor: "pointer", fontWeight: 700, color: tema.blueDark }}>{fmtInt(avisos.length)} avisos, só para conhecimento</summary>
-          <div style={{ fontSize: 13, color: tema.muted, margin: "8px 0 10px" }}>Não impedem o envio. Servem para você saber o que está indo para a Credinfar.</div>
+        <details className="card" style={{ marginTop: 6 }}>
+          <summary style={{ fontWeight: 700, color: tema.blueDark }}>{fmtInt(avisos.length)} avisos, só para conhecimento</summary>
+          <div style={{ fontSize: 13, color: tema.muted, margin: "10px 0 12px" }}>Não impedem o envio. Servem para você saber o que está indo para a Credinfar.</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {(Object.keys(ROTULO_AVISO) as CodigoAcao[]).map((cod) => {
               const n = avisos.filter((a) => a.codigo === cod).length;
               if (n === 0) return null;
-              const ativo = avisoAberto === cod;
               return (
-                <button key={cod} onClick={() => setAvisoAberto(ativo ? null : cod)} style={{ border: `1px solid ${ativo ? tema.amber : tema.line}`, background: ativo ? tema.amberBg : tema.surface, borderRadius: 999, padding: "7px 14px", cursor: "pointer", fontSize: 13, fontWeight: 600, color: tema.heading }}>
-                  {ROTULO_AVISO[cod]} <span style={{ color: tema.amber, fontWeight: 800 }}>{fmtInt(n)}</span>
+                <button key={cod} className="pill" aria-pressed={avisoAberto === cod} onClick={() => setAvisoAberto(avisoAberto === cod ? null : cod)}>
+                  {ROTULO_AVISO[cod]} <span className="n">{fmtInt(n)}</span>
                 </button>
               );
             })}
           </div>
           {avisoAberto && (
-            <div style={{ marginTop: 10, border: `1px solid ${tema.line}`, borderRadius: 10 }}>
+            <div style={{ marginTop: 12, border: `1px solid ${tema.line}`, borderRadius: 12, overflow: "hidden" }}>
               {avisos.filter((a) => a.codigo === avisoAberto).slice(0, 40).map((a) => {
                 const c = clientes.get(a.clienteId);
                 return (
-                  <div key={a.id} style={{ display: "flex", gap: 10, alignItems: "center", padding: "9px 14px", borderBottom: `1px solid ${tema.line}`, fontSize: 13, flexWrap: "wrap" }}>
-                    <button onClick={() => verCliente(a.clienteId)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: tema.blue, fontWeight: 700, textDecoration: "underline", textAlign: "left" }}>{c?.nome ?? a.clienteId}</button>
+                  <div key={a.id} style={{ display: "flex", gap: 10, alignItems: "center", padding: "10px 14px", borderBottom: `1px solid ${tema.line}`, fontSize: 13, flexWrap: "wrap" }}>
+                    <button onClick={() => verCliente(a.clienteId)} className="btn btn-link btn-sm" style={{ padding: 0, fontWeight: 700 }}>{c?.nome ?? a.clienteId}</button>
                     <span style={{ color: tema.muted, flex: 1, minWidth: 200 }}>{a.detalhe}</span>
-                    <Botao variante="link" tamanho="pequeno" onClick={() => setTirando(a)}>Tirar do envio</Botao>
+                    <Botao variante="ghost" tamanho="pequeno" onClick={() => setTirando(a)}>Tirar do envio</Botao>
                   </div>
                 );
               })}
@@ -255,17 +255,15 @@ export function Envio() {
 function Passos({ atual }: { atual: number }) {
   const passos = ["Receber a carteira", "Corrigir o que travou", "Enviar à Credinfar"];
   return (
-    <ol style={{ display: "flex", listStyle: "none", margin: 0, padding: 0, gap: 0, flexWrap: "wrap" }} aria-label="Passos do envio">
+    <ol className="passos" aria-label="Passos do envio">
       {passos.map((p, i) => {
         const n = i + 1;
-        const feito = atual > n;
-        const ativo = atual === n;
-        const cor = feito ? tema.ok : ativo ? tema.blue : tema.line;
+        const estado = atual > n ? "feito" : atual === n ? "ativo" : "futuro";
         return (
-          <li key={p} style={{ display: "flex", alignItems: "center", flex: "1 1 200px", gap: 10, padding: "4px 0" }} aria-current={ativo ? "step" : undefined}>
-            <span style={{ width: 30, height: 30, borderRadius: "50%", background: feito || ativo ? cor : tema.surface, border: `2px solid ${cor}`, color: feito || ativo ? "#fff" : tema.muted, display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, flexShrink: 0 }}>{feito ? "✓" : n}</span>
-            <span style={{ fontSize: 14, fontWeight: ativo ? 800 : 500, color: ativo ? tema.heading : tema.muted }}>{p}</span>
-            {n < 3 && <span style={{ flex: 1, height: 2, background: feito ? tema.ok : tema.line, marginRight: 12, minWidth: 16 }} />}
+          <li key={p} data-estado={estado} aria-current={estado === "ativo" ? "step" : undefined}>
+            <span className="bolha">{estado === "feito" ? "✓" : n}</span>
+            <span className="rotulo">{p}</span>
+            {n < 3 && <span className="traco" />}
           </li>
         );
       })}
@@ -303,13 +301,13 @@ function ModalCorrigir({ acao, cliente: c, onFechar, onConfirmar }: { acao: Acao
 
   return (
     <Modal titulo={`Corrigir · ${c.nome || formatarCnpj(c.cnpj)}`} aberto onFechar={onFechar}>
-      <div style={{ fontSize: 13.5, color: tema.ink }}>
+      <div style={{ fontSize: 13.5, color: tema.ink, lineHeight: 1.55 }}>
         <b>{acao.mensagem}.</b> {acao.detalhe}
       </div>
 
       {acao.codigo === "CNPJ_INVALIDO" && (
         <Campo rotulo="CNPJ correto (14 dígitos)" ajuda={cnpjValido(cnpj) ? "CNPJ válido." : "Os dois últimos dígitos não conferem."}>
-          <input value={cnpj} onChange={(e) => { setCnpj(e.target.value); setErro(null); }} style={inputStyle} aria-label="CNPJ correto" />
+          <input value={cnpj} onChange={(e) => { setCnpj(e.target.value); setErro(null); }} style={{ ...inputStyle, fontSize: 16, fontWeight: 700, fontFamily: tema.mono }} aria-label="CNPJ correto" />
         </Campo>
       )}
       {acao.codigo === "CADASTRO_INCOMPLETO" && (
@@ -331,8 +329,8 @@ function ModalCorrigir({ acao, cliente: c, onFechar, onConfirmar }: { acao: Acao
             ))}
             <Campo rotulo="Total vencido"><input value={vencido} onChange={(e) => { setVencido(num(e.target.value)); setErro(null); }} style={inputStyle} inputMode="numeric" /></Campo>
           </div>
-          <div style={{ marginTop: 8, fontSize: 13, color: soma === vencido ? tema.ok : tema.danger }}>
-            As faixas somam <b>{brlInt(soma)}</b> e o total vencido é <b>{brlInt(vencido)}</b>{soma === vencido ? ". Fechou." : `. Falta ${brlInt(vencido - soma)}.`}
+          <div style={{ marginTop: 10, fontSize: 13.5, color: soma === vencido ? tema.ok : tema.danger, fontWeight: 600 }}>
+            As faixas somam {brlInt(soma)} e o total vencido é {brlInt(vencido)}{soma === vencido ? ". Fechou." : `. Falta ${brlInt(vencido - soma)}.`}
           </div>
         </>
       )}
@@ -347,7 +345,7 @@ function ModalCorrigir({ acao, cliente: c, onFechar, onConfirmar }: { acao: Acao
         <input value={obs} onChange={(e) => setObs(e.target.value)} style={inputStyle} placeholder="Ex.: conferido com a cobrança" />
       </Campo>
       {erro && <Aviso tipo="erro">{erro}</Aviso>}
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 18, flexWrap: "wrap" }}>
         <Botao variante="secundario" onClick={onFechar}>Cancelar</Botao>
         {acao.codigo === "AGING_MISMATCH" && (
           <Botao variante="secundario" onClick={() => onConfirmar("ACEITAR_ORIGEM", {}, obs || "Valor do ERP aceito: a diferença foi para a faixa de 31 a 90 dias.")} title="Mantém o total vencido do ERP e coloca a diferença na faixa de 31 a 90 dias">
@@ -368,13 +366,10 @@ function ModalTirar({ nome, onFechar, onConfirmar }: { nome: string; onFechar: (
       <Campo rotulo="Motivo (opcional, fica no histórico)">
         <input value={motivo} onChange={(e) => setMotivo(e.target.value)} style={inputStyle} placeholder="Ex.: cadastro em revisão no ERP" />
       </Campo>
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 18 }}>
         <Botao variante="secundario" onClick={onFechar}>Cancelar</Botao>
         <Botao variante="perigo" onClick={() => onConfirmar(motivo.trim())}>Tirar do envio</Botao>
       </div>
     </Modal>
   );
 }
-
-const th = { padding: "6px 8px", fontWeight: 600, whiteSpace: "nowrap" as const, borderBottom: `1px solid ${tema.line}` };
-const td = { padding: "6px 8px", borderBottom: `1px solid ${tema.line}`, verticalAlign: "top" as const };

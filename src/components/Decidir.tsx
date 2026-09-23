@@ -1,12 +1,14 @@
 // Cartão de decisão e o modal que confirma a ação. Uma decisão por vez:
 // o que está acontecendo, por que importa e o que dá para fazer.
 import { useState } from "react";
+import type { CSSProperties } from "react";
+import { IconAlertTriangle, IconPhoneCall, IconTrendingUp } from "@tabler/icons-react";
 import { Botao } from "./Botao";
-import { Campo, Chip, Modal, inputStyle } from "./ui";
+import { Campo, Modal, inputStyle } from "./ui";
 import { brlInt } from "../engine/util";
 import type { ExtrasDecisao } from "../services/estado";
 import type { Cliente, OpcaoAcao, TipoSinal } from "../models/types";
-import { cardStyle, tema } from "../theme/tema";
+import { tema } from "../theme/tema";
 
 export const ROTULO_TIPO: Record<TipoSinal, string> = { RISCO: "Risco", COBRANCA: "Cobrança", OPORTUNIDADE: "Vender mais" };
 export const COR_TIPO: Record<TipoSinal, [string, string]> = {
@@ -14,6 +16,7 @@ export const COR_TIPO: Record<TipoSinal, [string, string]> = {
   COBRANCA: [tema.amber, tema.amberBg],
   OPORTUNIDADE: [tema.ok, tema.okBg],
 };
+const ICONE_TIPO: Record<TipoSinal, typeof IconAlertTriangle> = { RISCO: IconAlertTriangle, COBRANCA: IconPhoneCall, OPORTUNIDADE: IconTrendingUp };
 const VALOR_TIPO: Record<TipoSinal, string> = { RISCO: "em risco", COBRANCA: "a receber", OPORTUNIDADE: "de limite a mais" };
 const COR_BARRA = { verde: tema.ok, amarelo: tema.amber, vermelho: tema.danger } as const;
 
@@ -41,34 +44,38 @@ export function CartaoDecisao({
   const [mais, setMais] = useState(false);
   const principais = opcoes.slice(0, 2);
   const resto = opcoes.slice(2);
+  const Icone = tipo ? ICONE_TIPO[tipo] : null;
   return (
-    <article data-testid="decisao" style={{ ...cardStyle, borderLeft: `5px solid ${COR_BARRA[cor]}`, display: "flex", flexDirection: "column", gap: 8, padding: 18 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-        <div style={{ display: "flex", gap: 8, alignItems: "center", minWidth: 0, flexWrap: "wrap" }}>
-          {tipo && <Chip texto={ROTULO_TIPO[tipo]} fg={COR_TIPO[tipo][0]} bg={COR_TIPO[tipo][1]} />}
-          {nome &&
-            (onAbrirCliente ? (
-              <button onClick={onAbrirCliente} title="Abrir o cliente" style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontWeight: 800, fontSize: 15, color: tema.heading, textAlign: "left" }}>
-                {nome}
-              </button>
-            ) : (
-              <span style={{ fontWeight: 800, fontSize: 15, color: tema.heading }}>{nome}</span>
-            ))}
-        </div>
-        {tipo && valorEmJogo > 0 && (
-          <span style={{ fontSize: 13, color: tema.muted, whiteSpace: "nowrap" }}>
-            <b style={{ color: tema.heading, fontSize: 15 }}>{brlInt(valorEmJogo)}</b> {VALOR_TIPO[tipo]}
+    <article data-testid="decisao" className="decisao card-hover" style={{ "--cor": COR_BARRA[cor] } as CSSProperties}>
+      <div className="cabeca" style={{ display: "flex", gap: 10, alignItems: "center", minWidth: 0, flexWrap: "wrap" }}>
+        {tipo && Icone && (
+          <span className="chip" style={{ background: COR_TIPO[tipo][1], color: COR_TIPO[tipo][0] }}>
+            <Icone size={13} /> {ROTULO_TIPO[tipo]}
           </span>
         )}
+        {nome &&
+          (onAbrirCliente ? (
+            <button className="nome" onClick={onAbrirCliente} title="Abrir o cliente">
+              {nome}
+            </button>
+          ) : (
+            <span className="nome" style={{ cursor: "default" }}>{nome}</span>
+          ))}
       </div>
-      <div style={{ fontSize: 16, fontWeight: 700, color: tema.heading }}>{titulo}</div>
-      <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13.5, lineHeight: 1.65, color: tema.ink }}>
+      {tipo && valorEmJogo > 0 && (
+        <div className="valor num">
+          <b>{brlInt(valorEmJogo)}</b>
+          <span>{VALOR_TIPO[tipo]}</span>
+        </div>
+      )}
+      <h3>{titulo}</h3>
+      <ul>
         {porque.slice(0, 4).map((m) => (
           <li key={m}>{m}</li>
         ))}
       </ul>
       {opcoes.length > 0 && (
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 4 }}>
+        <div className="acoes">
           {principais.map((o, i) => (
             <Botao key={o.rotulo} variante={i === 0 ? "primario" : "secundario"} tamanho="pequeno" onClick={() => onEscolher(o)}>
               {o.rotulo}
@@ -109,7 +116,7 @@ export function ModalDecisao({ cliente: c, opcao, onFechar, onConfirmar }: { cli
       <div style={{ fontSize: 13.5, color: tema.ink, lineHeight: 1.6 }}>{explicacao[opcao.acao]}</div>
       {opcao.acao === "AJUSTAR_LIMITE" && (
         <Campo rotulo="Novo limite de crédito" ajuda={`Hoje: limite ${brlInt(c.limite)}, deve ${brlInt(c.debitoAtual)}.`}>
-          <input value={limite} onChange={(e) => setLimite(num(e.target.value))} style={{ ...inputStyle, fontSize: 16, fontWeight: 700 }} inputMode="numeric" aria-label="Novo limite" />
+          <input value={limite} onChange={(e) => setLimite(num(e.target.value))} style={{ ...inputStyle, fontSize: 18, fontWeight: 800 }} inputMode="numeric" aria-label="Novo limite" />
         </Campo>
       )}
       {opcao.acao === "REGISTRAR_CONTATO" && (
@@ -120,7 +127,7 @@ export function ModalDecisao({ cliente: c, opcao, onFechar, onConfirmar }: { cli
       <Campo rotulo={opcao.acao === "REGISTRAR_CONTATO" ? "O que foi combinado" : "Observação (opcional)"}>
         <input value={nota} onChange={(e) => setNota(e.target.value)} style={inputStyle} placeholder={opcao.acao === "REGISTRAR_CONTATO" ? "Ex.: falei com o financeiro, boleto não tinha chegado" : "Fica no histórico"} aria-label="Observação" />
       </Campo>
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 18 }}>
         <Botao variante="secundario" onClick={onFechar}>Cancelar</Botao>
         <Botao onClick={() => onConfirmar({ novoLimite: opcao.acao === "AJUSTAR_LIMITE" ? limite : undefined, nota: nota.trim() || undefined, promessaEm: promessa || undefined })}>Confirmar</Botao>
       </div>

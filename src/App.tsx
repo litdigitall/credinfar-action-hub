@@ -1,12 +1,12 @@
 // Credinfar Action Hub: do dado à decisão.
-//   Hoje        → lista curta de decisões (risco, cobrança, vender mais), priorizada por valor
-//   Clientes    → posição conosco x mercado, com as ações no mesmo lugar
+//   Hoje         → lista curta de decisões (risco, cobrança, vender mais), priorizada por valor
+//   Clientes     → posição conosco x mercado, com as ações no mesmo lugar
 //   Envio do mês → receber a carteira, corrigir o que travou, enviar
-//   Histórico   → envios, consultas e quem decidiu o quê
+//   Histórico    → envios, consultas e quem decidiu o quê
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { Icon } from "@tabler/icons-react";
-import { IconHistory, IconInbox, IconMenu2, IconSearch, IconSend, IconSettings, IconShieldCheck } from "@tabler/icons-react";
+import { IconAlertCircle, IconCircleCheck, IconHistory, IconInbox, IconMenu2, IconSearch, IconSend, IconSettings, IconShieldCheck, IconX } from "@tabler/icons-react";
 import type { Cliente, DecisaoAcao, EstadoHub, OpcaoAcao, Parametros, Remessa } from "./models/types";
 import type { RespostaCredinfar } from "./engine/credinfarMock";
 import type { ExtrasDecisao } from "./services/estado";
@@ -55,7 +55,7 @@ export interface Hub {
   avisar: (tipo: AvisoUi["tipo"], texto: string) => void;
   metricas: ReturnType<typeof calcularMetricas>;
   remessaAtual: Remessa | undefined;
-  clienteFoco: string | null; // cliente aberto na Consulta (mantido ao trocar de tela)
+  clienteFoco: string | null; // cliente aberto em Clientes (mantido ao trocar de tela)
   focarCliente: (id: string | null) => void;
   verCliente: (id: string) => void; // foca o cliente e abre a tela Clientes
   decidir: (clienteId: string, opcao: OpcaoAcao, extras: ExtrasDecisao) => void;
@@ -79,12 +79,16 @@ export function useHub(): Hub {
 export function App() {
   const pronto = usePowerPlatform();
   const [estado, setEstado] = useState<EstadoHub | null>(null);
-  const [aba, setAba] = useState<Aba>("hoje");
+  const [aba, setAbaBruto] = useState<Aba>("hoje");
   const [menuAberto, setMenuAberto] = useState(false);
   const [aviso, setAviso] = useState<AvisoUi | null>(null);
   const [clienteFoco, setClienteFoco] = useState<string | null>(null);
   const primeiraGravacao = useRef(true);
   const usuario = usuarioAtual.nome;
+  const setAba = useCallback((a: Aba) => {
+    setAbaBruto(a);
+    window.scrollTo({ top: 0 });
+  }, []);
 
   useEffect(() => {
     if (pronto) setEstado(carregarEstado());
@@ -105,7 +109,7 @@ export function App() {
 
   useEffect(() => {
     if (!aviso || aviso.tipo === "erro") return;
-    const t = setTimeout(() => setAviso(null), 7000);
+    const t = setTimeout(() => setAviso(null), 6000);
     return () => clearTimeout(t);
   }, [aviso]);
 
@@ -125,7 +129,7 @@ export function App() {
       });
       setAba("envio");
     },
-    [estado, usuario]
+    [estado, usuario, setAba]
   );
   const resolver = useCallback(
     (acaoId: string, decisao: DecisaoAcao, justificativa: string, alteracoes: Record<string, number | string>) => {
@@ -175,31 +179,40 @@ export function App() {
     if (!estado) return;
     const r = atualizarCarteira(estado, usuario);
     setEstado(r.estado);
-    setAviso(r.erro ? { tipo: "erro", texto: r.erro } : { tipo: "ok", texto: r.consultados === 0 ? "Sem consultas disponíveis neste mês para uma nova leitura. A lista atual continua valendo." : `Carteira atualizada: ${r.consultados.toLocaleString("pt-BR")} clientes consultados, ${r.novos} pedem decisão.` });
+    setAviso(
+      r.erro
+        ? { tipo: "erro", texto: r.erro }
+        : { tipo: "ok", texto: r.consultados === 0 ? "Sem consultas disponíveis neste mês para uma nova leitura. A lista atual continua valendo." : `Carteira atualizada: ${r.consultados.toLocaleString("pt-BR")} clientes consultados, ${r.novos} pedem decisão.` }
+    );
   }, [estado, usuario]);
   const reiniciar = useCallback(() => {
     setEstado(reiniciarEstado());
     setClienteFoco(null);
     setAba("hoje");
     setAviso({ tipo: "ok", texto: "Demonstração reiniciada com a carteira original." });
-  }, []);
-  const verCliente = useCallback((id: string) => {
-    setClienteFoco(id);
-    setAba("clientes");
-  }, []);
+  }, [setAba]);
+  const verCliente = useCallback(
+    (id: string) => {
+      setClienteFoco(id);
+      setAba("clientes");
+    },
+    [setAba]
+  );
 
   const hub = useMemo<Hub | null>(
     () =>
       estado
         ? { estado, usuario, aba, setAba, avisar, metricas: calcularMetricas(estado), remessaAtual: remessaCorrente(estado), clienteFoco, focarCliente: setClienteFoco, verCliente, decidir, liberar, atualizarLeitura, receber, resolver, enviar, consultarCredinfar, salvarParametros, reiniciar }
         : null,
-    [estado, usuario, aba, avisar, clienteFoco, verCliente, decidir, liberar, atualizarLeitura, receber, resolver, enviar, consultarCredinfar, salvarParametros, reiniciar]
+    [estado, usuario, aba, setAba, avisar, clienteFoco, verCliente, decidir, liberar, atualizarLeitura, receber, resolver, enviar, consultarCredinfar, salvarParametros, reiniciar]
   );
 
   if (!hub || !estado) {
     return (
       <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: tema.bg }}>
-        <div style={{ fontWeight: 800, color: tema.heading, fontSize: 18 }}>Credinfar Action Hub</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, color: tema.heading, fontWeight: 800, fontSize: 18 }}>
+          <span className="spinner" /> Credinfar Action Hub
+        </div>
       </div>
     );
   }
@@ -219,15 +232,8 @@ export function App() {
         {menuAberto && <div className="scrim" onClick={() => setMenuAberto(false)} />}
         <div className="mainCol">
           <TopBar aba={aba} onMenu={() => setMenuAberto((v) => !v)} />
-          {aviso && (
-            <div role="status" style={{ margin: "12px 20px 0", padding: "10px 14px", borderRadius: 10, fontSize: 13.5, background: aviso.tipo === "ok" ? tema.okBg : aviso.tipo === "erro" ? tema.dangerBg : tema.amberBg, color: aviso.tipo === "ok" ? tema.ok : aviso.tipo === "erro" ? tema.danger : tema.amber, display: "flex", justifyContent: "space-between", gap: 12 }}>
-              <span>{aviso.texto}</span>
-              <button onClick={() => setAviso(null)} aria-label="Fechar aviso" style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", fontWeight: 700 }}>
-                ✕
-              </button>
-            </div>
-          )}
-          <main className="content">
+          {aviso && <Toast aviso={aviso} onFechar={() => setAviso(null)} />}
+          <main className="content" key={aba}>
             {aba === "hoje" && <Hoje />}
             {aba === "clientes" && <Clientes />}
             {aba === "envio" && <Envio />}
@@ -241,18 +247,32 @@ export function App() {
 }
 
 // ---------------------------------------------------------------------------
+function Toast({ aviso, onFechar }: { aviso: AvisoUi; onFechar: () => void }) {
+  const cores = { ok: [tema.ok, "#E9F9EEF2"], erro: [tema.danger, "#FFF0F0F2"], aviso: [tema.amber, "#FFF1E6F2"] }[aviso.tipo];
+  const Icone = aviso.tipo === "ok" ? IconCircleCheck : IconAlertCircle;
+  return (
+    <div role="status" className="toast" style={{ background: cores[1], color: cores[0] }}>
+      <Icone size={20} style={{ flexShrink: 0, marginTop: 1 }} aria-hidden="true" />
+      <span style={{ color: tema.heading, flex: 1 }}>{aviso.texto}</span>
+      <button onClick={onFechar} aria-label="Fechar aviso" style={{ background: "none", border: "none", cursor: "pointer", color: tema.muted, padding: 0, display: "inline-flex" }}>
+        <IconX size={16} />
+      </button>
+    </div>
+  );
+}
+
 function Sidebar({ aba, aberto, onMudar, travados }: { aba: Aba; aberto: boolean; onMudar: (a: Aba) => void; travados: number }) {
   return (
-    <aside className={`sidebar${aberto ? " open" : ""}`} style={{ background: tema.sidebarGradient }}>
-      <div style={{ padding: "4px 4px 16px", borderBottom: "1px solid rgba(255,255,255,0.1)", marginBottom: 10 }}>
-        <div style={{ background: "#fff", borderRadius: 12, padding: "16px 18px", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: "0 2px 10px rgba(0,0,0,0.18)" }}>
+    <aside className={`sidebar${aberto ? " open" : ""}`}>
+      <div style={{ padding: "2px 2px 16px", borderBottom: "1px solid rgba(255,255,255,0.12)", marginBottom: 12 }}>
+        <div style={{ background: "#fff", borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.22)" }}>
           <span style={{ width: 34, height: 34, borderRadius: 10, background: tema.brandGradient, display: "inline-flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>
             <IconShieldCheck size={20} />
           </span>
           <span style={{ fontWeight: 800, color: tema.navy, fontSize: 15, letterSpacing: "-0.3px" }}>CFS Navigator</span>
         </div>
-        <div style={{ color: "#fff", fontSize: 22, fontWeight: 800, letterSpacing: "-0.5px", textAlign: "center", marginTop: 14, lineHeight: 1.1 }}>Credinfar Action Hub</div>
-        <div style={{ color: "rgba(255,255,255,0.78)", fontSize: 10.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: "1.4px", textAlign: "center", marginTop: 4 }}>Crédito e Cobrança · By CFS Navigator</div>
+        <div style={{ color: "#fff", fontSize: 21, fontWeight: 800, letterSpacing: "-0.5px", textAlign: "center", marginTop: 16, lineHeight: 1.1 }}>Credinfar Action Hub</div>
+        <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.4px", textAlign: "center", marginTop: 6 }}>Crédito e Cobrança</div>
       </div>
 
       <div style={navSectionStyle}>O que você quer fazer</div>
@@ -263,13 +283,14 @@ function Sidebar({ aba, aberto, onMudar, travados }: { aba: Aba; aberto: boolean
 
       <div style={{ marginTop: "auto" }}>
         <NavItem icone={IconSettings} rotulo="Configurações" ativa={aba === "config"} onClick={() => onMudar("config")} />
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 10px", borderRadius: 10, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", marginTop: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 10px", borderRadius: 14, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)", marginTop: 10 }}>
           <Avatar tamanho={40} />
           <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ color: "#fff", fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{usuarioAtual.nome}</div>
-            <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>Crédito e Cobrança</div>
+            <div style={{ color: "#fff", fontSize: 13, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{usuarioAtual.nome}</div>
+            <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 11 }}>Crédito e Cobrança</div>
           </div>
         </div>
+        <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 10.5, textAlign: "center", marginTop: 12, letterSpacing: "0.04em" }}>By CFS Navigator</div>
       </div>
     </aside>
   );
@@ -277,14 +298,10 @@ function Sidebar({ aba, aberto, onMudar, travados }: { aba: Aba; aberto: boolean
 
 function NavItem({ icone: Icone, rotulo, ativa, badge, onClick }: { icone: Icon; rotulo: string; ativa: boolean; badge?: number; onClick: () => void }) {
   return (
-    <button
-      onClick={onClick}
-      aria-current={ativa ? "page" : undefined}
-      style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 12px", borderRadius: 9, border: "none", background: ativa ? "#fff" : "transparent", color: ativa ? tema.blueDark : "rgba(255,255,255,0.78)", fontSize: 14.5, fontWeight: ativa ? 700 : 500, cursor: "pointer", textAlign: "left", width: "100%" }}
-    >
-      <Icone size={20} stroke={1.7} />
-      <span style={{ flex: 1 }}>{rotulo}</span>
-      {(badge ?? 0) > 0 && <span style={{ background: tema.danger, color: "#fff", borderRadius: 999, fontSize: 11, fontWeight: 700, padding: "1px 8px" }}>{badge}</span>}
+    <button className="nav-item" onClick={onClick} aria-current={ativa ? "page" : undefined}>
+      <Icone size={20} stroke={1.8} />
+      <span>{rotulo}</span>
+      {(badge ?? 0) > 0 && <span className="badge">{badge}</span>}
     </button>
   );
 }
@@ -292,20 +309,20 @@ function NavItem({ icone: Icone, rotulo, ativa, badge, onClick }: { icone: Icon;
 function TopBar({ aba, onMenu }: { aba: Aba; onMenu: () => void }) {
   const { estado } = useHub();
   return (
-    <header style={{ minHeight: 62, background: "rgba(255,255,255,0.9)", backdropFilter: "blur(8px)", borderBottom: `1px solid ${tema.line}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "8px 20px", position: "sticky", top: 0, zIndex: 10, flexWrap: "wrap" }}>
+    <header className="topbar">
       <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-        <button className="burger" onClick={onMenu} aria-label="Menu" style={{ width: 38, height: 38, borderRadius: 10, border: `1px solid ${tema.line}`, background: tema.surface, cursor: "pointer", alignItems: "center", justifyContent: "center", color: tema.ink }}>
+        <button className="burger btn btn-secundario btn-sm" onClick={onMenu} aria-label="Menu" style={{ padding: 8 }}>
           <IconMenu2 size={18} />
         </button>
-        <div style={{ fontSize: 18, fontWeight: 800, color: tema.heading, whiteSpace: "nowrap" }}>{TITULOS[aba]}</div>
+        <div style={{ fontSize: 17, fontWeight: 800, color: tema.heading, whiteSpace: "nowrap", letterSpacing: "-0.01em" }}>{TITULOS[aba]}</div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <span style={chip}>Mês {estado.parametros.competencia}</span>
-        <span style={{ fontSize: 11.5, fontWeight: 700, background: tema.amberBg, color: tema.amber, borderRadius: 999, padding: "3px 10px" }}>PROTÓTIPO · DADOS SIMULADOS</span>
-        <div className="usuarioTopo" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span className="chip" style={{ background: tema.surface, color: tema.heading, border: `1px solid ${tema.line2}`, padding: "7px 13px", fontSize: 13 }}>Mês {estado.parametros.competencia}</span>
+        <span className="chip" style={{ background: tema.amberBg, color: tema.amber }}>Protótipo · dados simulados</span>
+        <div className="usuarioTopo" style={{ display: "flex", alignItems: "center", gap: 9, paddingLeft: 6 }}>
           <Avatar tamanho={34} />
           <div>
-            <div style={{ fontSize: 13.5, fontWeight: 600, color: tema.heading }}>{usuarioAtual.nome}</div>
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: tema.heading, lineHeight: 1.2 }}>{usuarioAtual.nome}</div>
             <div style={{ fontSize: 11.5, color: tema.muted }}>{usuarioAtual.email || estado.parametros.nomeAssociada}</div>
           </div>
         </div>
@@ -324,11 +341,10 @@ const iniciais = (nome: string) =>
 
 function Avatar({ tamanho }: { tamanho: number }) {
   return (
-    <div style={{ width: tamanho, height: tamanho, borderRadius: "50%", background: tema.avatarGradient, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: tamanho * 0.38, fontWeight: 700, flexShrink: 0 }}>
+    <div style={{ width: tamanho, height: tamanho, borderRadius: "50%", background: tema.avatarGradient, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: tamanho * 0.36, fontWeight: 800, flexShrink: 0, boxShadow: "0 4px 12px rgba(0,107,179,0.35)" }}>
       {iniciais(usuarioAtual.nome)}
     </div>
   );
 }
 
-const navSectionStyle: CSSProperties = { color: "rgba(255,255,255,0.72)", fontSize: 11, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", padding: "14px 12px 6px" };
-const chip: CSSProperties = { border: `1px solid ${tema.line}`, borderRadius: 999, padding: "6px 12px", fontSize: 13, background: tema.surface, color: tema.heading, fontWeight: 600 };
+const navSectionStyle: CSSProperties = { color: "rgba(255,255,255,0.55)", fontSize: 10.5, fontWeight: 800, letterSpacing: "1.4px", textTransform: "uppercase", padding: "10px 13px 8px" };
