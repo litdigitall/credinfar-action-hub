@@ -3,43 +3,61 @@
    Tokens, tipografia, superfícies, movimento, casca e utilitários.
    ===================================================================== */
 :root {
-  --bg: #eef2f7;
-  --bg-2: #f6f8fb;
+  /* Paleta oficial Abbott (Signature Blue, Primary Blue, Steel, Stone, Ember, Coral, Mint, Yellow, Violet) */
+  --bg: #f2f5f6;
+  --bg-2: #f8fafa;
   --surface: #ffffff;
-  --surface-2: #f9fbfd;
-  --ink: #17263a;
-  --heading: #0b1a2c;
-  --muted: #64748b;
-  --muted-2: #94a3b8;
-  --line: #e4eaf2;
-  --line-2: #d5dee9;
+  --surface-2: #f7f9fa;
+  --ink: #344042;
+  --heading: #000075;
+  --muted: #66777a;
+  --muted-2: #a8baba;
+  --line: #e4eeef;
+  --line-2: #d0dddd;
 
-  --blue: #007acc;
-  --blue-2: #005c99;
-  --navy: #004982;
-  --blue-soft: #e8f3fc;
-  --grape: #7c35ff;
-  --grape-soft: #f2eaff;
-  --amber: #e8590c;
-  --amber-soft: #fff1e6;
-  --green: #2f9e44;
-  --green-soft: #e9f9ee;
-  --red: #e03131;
-  --red-soft: #fff0f0;
+  --blue: #2e4aed;
+  --blue-2: #1d34c4;
+  --navy: #000075;
+  --blue-soft: #eaedfe;
+  --grape: #8054f2;
+  --grape-soft: #e5defc;
+  --amber: #d9451b;
+  --amber-soft: #fcded4;
+  --green: #1a7f3a;
+  --green-soft: #e3fae0;
+  --red: #e5173f;
+  --red-soft: #ffe3e8;
+  --yellow: #ffbf21;
+  --yellow-soft: #fff2d4;
+  --yellow-ink: #5c4500;
 
-  --brand: linear-gradient(60deg, #006bb3 0%, #7c35ff 100%);
-  --sidebar: linear-gradient(180deg, #06305a 0%, #004982 45%, #2c1c62 130%);
+  --brand: linear-gradient(60deg, #2e4aed 0%, #1b2fb8 100%);
+  --sidebar: linear-gradient(180deg, #000075 0%, #0a1698 55%, #2e4aed 160%);
 
-  --radius: 16px;
-  --radius-sm: 11px;
-  --shadow-1: 0 1px 2px rgba(11, 26, 44, 0.05), 0 2px 10px rgba(11, 26, 44, 0.05);
-  --shadow-2: 0 8px 28px rgba(11, 26, 44, 0.1), 0 2px 8px rgba(11, 26, 44, 0.05);
-  --shadow-3: 0 24px 60px rgba(11, 26, 44, 0.22);
+  --font-display: "Outfit Variable", "Segoe UI", Roboto, sans-serif;
+  --font-body: Roboto, "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow-1: 0 1px 2px rgba(0, 0, 117, 0.04), 0 2px 10px rgba(0, 0, 117, 0.05);
+  --shadow-2: 0 8px 28px rgba(0, 0, 117, 0.1), 0 2px 8px rgba(0, 0, 117, 0.05);
+  --shadow-3: 0 24px 60px rgba(0, 0, 117, 0.22);
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
 * {
   box-sizing: border-box;
+}
+h1,
+h2,
+h3,
+.h1,
+.h2,
+.kicker,
+.nav-item,
+.btn,
+.display {
+  font-family: var(--font-display);
 }
 html {
   -webkit-text-size-adjust: 100%;
@@ -48,8 +66,8 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
+  font-family: var(--font-body);
+  font-feature-settings: "tnum", "lnum";
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -207,10 +225,10 @@ button {
 }
 .topbar {
   min-height: 64px;
-  background: rgba(238, 242, 247, 0.82);
+  background: rgba(255, 255, 255, 0.88);
   backdrop-filter: saturate(160%) blur(10px);
   -webkit-backdrop-filter: saturate(160%) blur(10px);
-  border-bottom: 1px solid rgba(213, 222, 233, 0.7);
+  border-bottom: 1px solid var(--line);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -231,8 +249,9 @@ button {
   border: none;
   background: transparent;
   color: rgba(255, 255, 255, 0.78);
-  font-size: 14.5px;
+  font-size: 15px;
   font-weight: 500;
+  letter-spacing: 0.01em;
   cursor: pointer;
   text-align: left;
   width: 100%;
@@ -247,8 +266,8 @@ button {
 }
 .nav-item[aria-current="page"] {
   background: #fff;
-  color: var(--blue-2);
-  font-weight: 700;
+  color: var(--navy);
+  font-weight: 600;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
 }
 .nav-item .badge {
@@ -291,8 +310,8 @@ button {
   border-radius: 20px;
   padding: 26px 28px;
   color: #fff;
-  background: linear-gradient(115deg, #06305a 0%, #004982 40%, #0a63a8 68%, #3a1d6e 130%);
-  box-shadow: 0 18px 44px rgba(0, 73, 130, 0.28);
+  background: linear-gradient(115deg, #000075 0%, #1b2fb8 45%, #2e4aed 78%, #00bfde 150%);
+  box-shadow: 0 18px 44px rgba(0, 0, 117, 0.26);
 }
 .hero::after {
   content: "";
@@ -307,22 +326,22 @@ button {
 }
 .kicker {
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--blue);
 }
 .h1 {
-  font-size: 30px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
   color: var(--heading);
   line-height: 1.1;
   margin: 0;
 }
 .h2 {
-  font-size: 18px;
-  font-weight: 800;
+  font-size: 19px;
+  font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--heading);
   margin: 0 0 12px;
@@ -373,11 +392,11 @@ button {
 .btn-primario {
   background: var(--brand);
   color: #fff;
-  box-shadow: 0 8px 20px rgba(0, 107, 179, 0.28);
+  box-shadow: 0 8px 20px rgba(46, 74, 237, 0.28);
 }
 .btn-primario:hover:not(:disabled) {
   filter: brightness(1.06);
-  box-shadow: 0 10px 26px rgba(0, 107, 179, 0.36);
+  box-shadow: 0 10px 26px rgba(46, 74, 237, 0.36);
   transform: translateY(-1px);
 }
 .btn-secundario {
@@ -415,7 +434,7 @@ button {
   border-color: transparent;
 }
 .btn-ghost:hover:not(:disabled) {
-  background: rgba(11, 26, 44, 0.06);
+  background: rgba(0, 0, 117, 0.06);
 }
 .btn-claro {
   background: rgba(255, 255, 255, 0.14);
@@ -493,14 +512,14 @@ select:focus {
   background: var(--heading);
   color: #fff;
   border-color: var(--heading);
-  box-shadow: 0 6px 16px rgba(11, 26, 44, 0.22);
+  box-shadow: 0 6px 16px rgba(0, 0, 117, 0.22);
 }
 .pill .n {
   font-weight: 800;
   border-radius: 999px;
   padding: 1px 8px;
   font-size: 12px;
-  background: rgba(11, 26, 44, 0.06);
+  background: rgba(0, 0, 117, 0.06);
 }
 .pill[aria-pressed="true"] .n {
   background: rgba(255, 255, 255, 0.18);
@@ -556,8 +575,10 @@ select:focus {
 }
 .decisao .valor b {
   display: block;
-  font-size: 22px;
-  letter-spacing: -0.02em;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 24px;
+  letter-spacing: -0.01em;
   color: var(--heading);
 }
 .decisao .valor span {
@@ -569,8 +590,8 @@ select:focus {
 }
 .decisao h3 {
   margin: 2px 0 0;
-  font-size: 18px;
-  font-weight: 800;
+  font-size: 18.5px;
+  font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--heading);
 }
@@ -671,7 +692,7 @@ select:focus {
   background: var(--brand);
   border-color: transparent;
   color: #fff;
-  box-shadow: 0 6px 18px rgba(0, 107, 179, 0.35);
+  box-shadow: 0 6px 18px rgba(46, 74, 237, 0.35);
 }
 .passos .rotulo {
   font-size: 14.5px;
@@ -731,7 +752,7 @@ select:focus {
   height: 18px;
   border-radius: 50%;
   border: 2.5px solid rgba(0, 122, 204, 0.25);
-  border-top-color: #007acc;
+  border-top-color: #2e4aed;
   animation: girar 0.8s linear infinite;
 }
 .burger {
@@ -775,7 +796,7 @@ details[open] > summary::before {
   white-space: pre;
 }
 .barra {
-  background: rgba(11, 26, 44, 0.08);
+  background: rgba(0, 0, 117, 0.08);
   border-radius: 999px;
   height: 8px;
   overflow: hidden;
@@ -837,7 +858,7 @@ details[open] > summary::before {
     display: block;
     position: fixed;
     inset: 0;
-    background: rgba(11, 26, 44, 0.45);
+    background: rgba(0, 0, 117, 0.45);
     z-index: 30;
     animation: fundo 0.2s both;
   }

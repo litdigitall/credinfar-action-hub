@@ -35,7 +35,7 @@ export function MetricCard({ label, valor, cor, sub, icone }: { label: string; v
       )}
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: 12.5, color: tema.muted, fontWeight: 600 }}>{label}</div>
-        <div className="num" style={{ fontSize: "clamp(20px, 1.8vw, 26px)", fontWeight: 800, color: cor ?? tema.heading, letterSpacing: "-0.02em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: 2 }} title={valor}>
+        <div className="display num" style={{ fontSize: "clamp(22px, 1.9vw, 28px)", fontWeight: 600, color: cor ?? tema.heading, letterSpacing: "-0.01em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: 2 }} title={valor}>
           {valor}
         </div>
         {sub && <div style={{ fontSize: 12, color: tema.muted, marginTop: 3 }}>{sub}</div>}

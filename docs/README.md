@@ -85,6 +85,14 @@ reserva para o dia a dia e não reabre o que já foi decidido no mês.
    (61.412.110/0001-55), tire os demais, "Ver o arquivo antes", "Gerar arquivo e enviar".
 5. **Histórico**: as decisões, a cobrança e o envio com nome e hora.
 
+## Identidade visual
+
+Paleta oficial Abbott (Signature Blue `#000075`, Primary Blue `#2E4AED`, Steel para texto, Ember, Coral, Mint e
+Yellow para estados), assinatura Abbott no canto superior esquerdo da barra de marca e o nome do app como
+texto, como pede o guia de aplicativos da Abbott. Tipografia empacotada no app (não depende de internet
+dentro do Power Apps): Outfit para títulos, navegação, botões e números grandes; Roboto para texto e
+tabelas, com algarismos tabulares. Tokens em `src/index.css` e `src/theme/tema.ts`.
+
 ## Rodar, testar e publicar
 
 ```bash

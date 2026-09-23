@@ -84,7 +84,7 @@ export function Envio() {
         <Section titulo={passo === 4 ? "Envio concluído" : "1. Receber a carteira do mês"}>
           {passo === 4 && r && (
             <div className="hero" style={{ marginBottom: 14 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 20, fontWeight: 800 }}>
+              <div className="display" style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 21, fontWeight: 600 }}>
                 <IconCircleCheck size={26} /> Enviado à Credinfar
               </div>
               <div style={{ fontSize: 14.5, opacity: 0.92, marginTop: 8, lineHeight: 1.7, maxWidth: 720 }}>
@@ -144,7 +144,7 @@ export function Envio() {
         <Section titulo="3. Enviar à Credinfar">
           <div className="hero">
             <div className="kicker" style={{ color: "rgba(255,255,255,0.75)" }}>Tudo conferido</div>
-            <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.02em", marginTop: 4 }}>Tudo pronto para enviar</div>
+            <div className="display" style={{ fontSize: 26, fontWeight: 600, letterSpacing: "-0.01em", marginTop: 4 }}>Tudo pronto para enviar</div>
             <div style={{ fontSize: 14.5, opacity: 0.92, marginTop: 8, lineHeight: 1.7, maxWidth: 720 }}>
               {fmtInt(noEnvio)} clientes, {brlInt(m.carteira)} de débito e {brlInt(m.vencido)} vencidos. O app monta o arquivo no layout oficial da Credinfar (270 posições por cliente), confere linha por linha e registra o envio.
             </div>

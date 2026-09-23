@@ -17,19 +17,19 @@ import { tema } from "../theme/tema";
 // azul · laranja, sempre com legenda e rótulo direto; notas A–E em escala
 // divergente azul (bom) · cinza · vermelho (ruim), sempre com a letra escrita;
 // magnitude em um só matiz (azul, claro → escuro).
-const COR = { s1: "#007ACC", s2: "#E8590C", grid: "#E4EAF2", eixo: "#94A3B8", texto: "#64748B", cinza: "#C7CFD9" };
-const COR_NOTA: Record<string, string> = { A: "#256ABF", B: "#86B6EF", C: "#B8BEC6", D: "#F0A0A0", E: "#E34948" };
+const COR = { s1: "#2E4AED", s2: "#FF5729", grid: "#E4EEEF", eixo: "#A8BABA", texto: "#66777A", cinza: "#D0DDDD" };
+const COR_NOTA: Record<string, string> = { A: "#2E4AED", B: "#96A3F5", C: "#D0DDDD", D: "#FF9EAD", E: "#FF2652" };
 const SIGNIFICADO: Record<string, string> = { A: "excelente", B: "boa", C: "aceitável", D: "fraca", E: "insuficiente" };
 const GRUPOS: Quadrante[] = ["Atrasa com todo o mercado", "Atrasa só com a gente", "Em dia ou atraso leve"];
 const COR_GRUPO: Record<Quadrante, string> = { "Atrasa com todo o mercado": COR.s2, "Atrasa só com a gente": COR.s1, "Em dia ou atraso leve": COR.cinza };
-const SEQ = ["#CDE2FB", "#9EC5F4", "#6DA7EC", "#3987E5", "#256ABF", "#1C5CAB", "#104281"];
+const SEQ = ["#D6DBFC", "#B9C2F9", "#96A3F5", "#6A7DF1", "#2E4AED", "#1B2FB8", "#000075"];
 
 const mil = (v: number) => (v >= 1_000_000 ? `${(v / 1_000_000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi` : `${Math.round(v / 1000).toLocaleString("pt-BR")} mil`);
 const pct1 = (v: number) => `${v.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
 const pct0 = (v: number) => `${Math.round(v).toLocaleString("pt-BR")}%`;
 const dinheiro = (v: number) => (v === 0 ? "R$ 0" : brlExec(v));
 const TICK = { fontSize: 11, fill: COR.texto };
-const CURSOR_BARRA = { fill: "rgba(0,122,204,0.06)" };
+const CURSOR_BARRA = { fill: "rgba(46,74,237,0.06)" };
 
 export function Analises() {
   const { estado, setAba, verCliente } = useHub();
@@ -260,7 +260,7 @@ function Grafico({ titulo, pergunta, leitura, legenda, children }: { titulo: str
       <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start", flexWrap: "wrap" }}>
         <div>
           <div className="kicker">{pergunta}</div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: tema.heading, letterSpacing: "-0.01em", marginTop: 3 }}>{titulo}</div>
+          <div className="display" style={{ fontSize: 17, fontWeight: 600, color: tema.heading, letterSpacing: "-0.005em", marginTop: 3 }}>{titulo}</div>
         </div>
         {legenda && (
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", fontSize: 12, color: tema.muted }}>
@@ -287,7 +287,7 @@ function Kpi({ rotulo, valor, sub, cor, icone, delta, deltaSufixo, pior }: { rot
       {icone && <span style={{ width: 36, height: 36, borderRadius: 11, background: `${cor ?? tema.blue}14`, color: cor ?? tema.blue, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{icone}</span>}
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: 12.5, color: tema.muted, fontWeight: 600 }}>{rotulo}</div>
-        <div style={{ fontSize: 24, fontWeight: 800, color: cor ?? tema.heading, letterSpacing: "-0.02em", marginTop: 2, whiteSpace: "nowrap" }}>{valor}</div>
+        <div className="display" style={{ fontSize: 26, fontWeight: 600, color: cor ?? tema.heading, letterSpacing: "-0.01em", marginTop: 2, whiteSpace: "nowrap" }}>{valor}</div>
         <div style={{ fontSize: 12, color: tema.muted, marginTop: 3, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
           {delta !== undefined && Math.abs(delta) >= 0.05 && (
             <span style={{ color: ruim ? tema.danger : tema.ok, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 2 }}>
@@ -305,7 +305,7 @@ function Kpi({ rotulo, valor, sub, cor, icone, delta, deltaSufixo, pior }: { rot
 }
 
 // Dica (tooltip) padrão: nome da série + valor formatado
-const DICA_ESTILO = { background: "#0B1A2C", color: "#fff", borderRadius: 10, padding: "8px 12px", fontSize: 12.5, boxShadow: "0 8px 24px rgba(11,26,44,0.25)" } as const;
+const DICA_ESTILO = { background: "#0B1140", color: "#fff", borderRadius: 10, padding: "8px 12px", fontSize: 12.5, boxShadow: "0 8px 24px rgba(0,0,117,0.25)" } as const;
 
 function Dica({ active, payload, label, formato }: { active?: boolean; payload?: { name?: string; value?: number | string; color?: string }[]; label?: string; formato: (x: number | string) => string }) {
   if (!active || !payload?.length) return null;

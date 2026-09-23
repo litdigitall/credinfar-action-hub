@@ -77,7 +77,7 @@ export function Hoje() {
             </span>
             <span style={{ minWidth: 0 }}>
               <span style={{ display: "block", fontSize: 12.5, color: tema.muted, fontWeight: 600 }}>Envio de {remessaAtual.competencia}</span>
-              <span style={{ display: "block", fontSize: 18, fontWeight: 800, color: m.bloqueios > 0 ? tema.danger : tema.ok, letterSpacing: "-0.01em", marginTop: 2 }}>{m.bloqueios > 0 ? `${m.bloqueios} travado(s)` : "Pronto para sair"}</span>
+              <span className="display" style={{ display: "block", fontSize: 19, fontWeight: 600, color: m.bloqueios > 0 ? tema.danger : tema.ok, letterSpacing: "-0.01em", marginTop: 2 }}>{m.bloqueios > 0 ? `${m.bloqueios} travado(s)` : "Pronto para sair"}</span>
               <span style={{ display: "block", fontSize: 12, color: tema.blue, fontWeight: 700, marginTop: 3 }}>{m.bloqueios > 0 ? "Resolver agora ›" : "Enviar ›"}</span>
             </span>
           </button>
@@ -174,7 +174,7 @@ function Tile({ icone, cor, rotulo, valor, sub, barra }: { icone: React.ReactNod
       </span>
       <div style={{ minWidth: 0, flex: 1 }}>
         <div style={{ fontSize: 12.5, color: tema.muted, fontWeight: 600 }}>{rotulo}</div>
-        <div className="num" style={{ fontSize: 20, fontWeight: 800, color: tema.heading, letterSpacing: "-0.02em", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={valor}>{valor}</div>
+        <div className="display num" style={{ fontSize: 22, fontWeight: 600, color: tema.heading, letterSpacing: "-0.01em", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={valor}>{valor}</div>
         {sub && <div style={{ fontSize: 12, color: tema.muted, marginTop: 3 }}>{sub}</div>}
         {barra !== undefined && (
           <div className="barra" style={{ marginTop: 8 }} aria-hidden="true">
@@ -197,7 +197,7 @@ function Pilula({ rotulo, n, ativa, onClick, cor }: { rotulo: string; n: number;
 
 function Retrato({ porNota }: { porNota: Record<string, { clientes: number; debito: number }> }) {
   const total = Object.values(porNota).reduce((t, x) => t + x.debito, 0) || 1;
-  const cores: Record<string, string> = { A: tema.ok, B: "#74B816", C: tema.amber, D: "#E8590C", E: tema.danger };
+  const cores: Record<string, string> = { A: "#2E4AED", B: "#96A3F5", C: "#A8BABA", D: "#FF9EAD", E: "#FF2652" };
   return (
     <div style={{ marginTop: 14 }}>
       <div style={{ display: "flex", height: 14, borderRadius: 8, overflow: "hidden", gap: 2 }} aria-hidden="true">

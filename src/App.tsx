@@ -7,6 +7,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { CSSProperties } from "react";
 import type { Icon } from "@tabler/icons-react";
 import { IconAlertCircle, IconChartBar, IconCircleCheck, IconHistory, IconInbox, IconMenu2, IconSearch, IconSend, IconSettings, IconShieldCheck, IconX } from "@tabler/icons-react";
+import abbottLogoBranco from "./assets/abbott-logo-branco.png";
 import type { Cliente, DecisaoAcao, EstadoHub, OpcaoAcao, Parametros, Remessa } from "./models/types";
 import type { RespostaCredinfar } from "./engine/credinfarMock";
 import type { ExtrasDecisao } from "./services/estado";
@@ -267,15 +268,10 @@ function Toast({ aviso, onFechar }: { aviso: AvisoUi; onFechar: () => void }) {
 function Sidebar({ aba, aberto, onMudar, travados }: { aba: Aba; aberto: boolean; onMudar: (a: Aba) => void; travados: number }) {
   return (
     <aside className={`sidebar${aberto ? " open" : ""}`}>
-      <div style={{ padding: "2px 2px 16px", borderBottom: "1px solid rgba(255,255,255,0.12)", marginBottom: 12 }}>
-        <div style={{ background: "#fff", borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.22)" }}>
-          <span style={{ width: 34, height: 34, borderRadius: 10, background: tema.brandGradient, display: "inline-flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>
-            <IconShieldCheck size={20} />
-          </span>
-          <span style={{ fontWeight: 800, color: tema.navy, fontSize: 15, letterSpacing: "-0.3px" }}>CFS Navigator</span>
-        </div>
-        <div style={{ color: "#fff", fontSize: 21, fontWeight: 800, letterSpacing: "-0.5px", textAlign: "center", marginTop: 16, lineHeight: 1.1 }}>Credinfar Action Hub</div>
-        <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.4px", textAlign: "center", marginTop: 6 }}>Crédito e Cobrança</div>
+      <div style={{ padding: "8px 8px 18px", borderBottom: "1px solid rgba(255,255,255,0.14)", marginBottom: 12 }}>
+        <img src={abbottLogoBranco} alt="Abbott" style={{ height: 26, width: "auto", display: "block" }} />
+        <div className="display" style={{ color: "#fff", fontSize: 21, fontWeight: 600, letterSpacing: "-0.01em", marginTop: 18, lineHeight: 1.15 }}>Credinfar Action Hub</div>
+        <div className="display" style={{ color: "rgba(255,255,255,0.72)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.14em", marginTop: 6 }}>Crédito e Cobrança</div>
       </div>
 
       <div style={navSectionStyle}>O que você quer fazer</div>
@@ -294,7 +290,7 @@ function Sidebar({ aba, aberto, onMudar, travados }: { aba: Aba; aberto: boolean
             <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 11 }}>Crédito e Cobrança</div>
           </div>
         </div>
-        <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 10.5, textAlign: "center", marginTop: 12, letterSpacing: "0.04em" }}>By CFS Navigator</div>
+        <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 11, textAlign: "center", marginTop: 12, letterSpacing: "0.04em", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><IconShieldCheck size={13} /> By CFS Navigator</div>
       </div>
     </aside>
   );
@@ -318,11 +314,11 @@ function TopBar({ aba, onMenu }: { aba: Aba; onMenu: () => void }) {
         <button className="burger btn btn-secundario btn-sm" onClick={onMenu} aria-label="Menu" style={{ padding: 8 }}>
           <IconMenu2 size={18} />
         </button>
-        <div style={{ fontSize: 17, fontWeight: 800, color: tema.heading, whiteSpace: "nowrap", letterSpacing: "-0.01em" }}>{TITULOS[aba]}</div>
+        <div className="display" style={{ fontSize: 18, fontWeight: 600, color: tema.heading, whiteSpace: "nowrap", letterSpacing: "-0.005em" }}>{TITULOS[aba]}</div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         <span className="chip" style={{ background: tema.surface, color: tema.heading, border: `1px solid ${tema.line2}`, padding: "7px 13px", fontSize: 13 }}>Mês {estado.parametros.competencia}</span>
-        <span className="chip" style={{ background: tema.amberBg, color: tema.amber }}>Protótipo · dados simulados</span>
+        <span className="chip" style={{ background: tema.yellowBg, color: tema.yellowInk }}>Protótipo · dados simulados</span>
         <div className="usuarioTopo" style={{ display: "flex", alignItems: "center", gap: 9, paddingLeft: 6 }}>
           <Avatar tamanho={34} />
           <div>
