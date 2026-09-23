@@ -24,6 +24,6 @@ npm run testar:e2e   # navegador (com o dev server ligado)
 npm run build
 ```
 
-Página pública do protótipo (publicada a cada push na main): https://lrodriguesit.github.io/credinfar-action-hub/
+Página pública do protótipo (publicada a cada push na main): https://litdigitall.github.io/credinfar-action-hub/
 
 O negócio, as regras de decisão, o roteiro de demonstração e os limites: [docs/README.md](docs/README.md).
