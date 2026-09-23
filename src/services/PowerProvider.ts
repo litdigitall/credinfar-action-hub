@@ -28,16 +28,25 @@ export function aguardarConexao(): Promise<void> {
   ]);
 }
 
+// Fora do host do Power Apps (página pública, preview local) o app roda na
+// janela principal, não num iframe: pula o handshake, que nunca responderia.
+const semHost = typeof window !== "undefined" && window.top === window.self;
+if (semHost) resolverConexao();
+
 export function usePowerPlatform(): boolean {
-  const [pronto, setPronto] = useState(import.meta.env.DEV);
+  const [pronto, setPronto] = useState(import.meta.env.DEV || semHost);
 
   useEffect(() => {
-    if (import.meta.env.DEV) return;
+    if (import.meta.env.DEV || semHost) return;
     let ativo = true;
     (async () => {
       try {
         const { getContext } = await import("@microsoft/power-apps/app");
-        const contexto = await getContext();
+        // O host pode não responder: nunca deixar o app preso no carregamento.
+        const contexto = await Promise.race([
+          getContext(),
+          new Promise<never>((_, rejeitar) => setTimeout(() => rejeitar(new Error("host não respondeu em 8 s")), 8000)),
+        ]);
         // Nome real do usuário para a trilha (quem comentou/alterou status):
         // fullName; senão o prefixo do e-mail corporativo.
         if (contexto.user.fullName) {
