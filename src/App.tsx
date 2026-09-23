@@ -6,7 +6,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { Icon } from "@tabler/icons-react";
-import { IconAlertCircle, IconCircleCheck, IconHistory, IconInbox, IconMenu2, IconSearch, IconSend, IconSettings, IconShieldCheck, IconX } from "@tabler/icons-react";
+import { IconAlertCircle, IconChartBar, IconCircleCheck, IconHistory, IconInbox, IconMenu2, IconSearch, IconSend, IconSettings, IconShieldCheck, IconX } from "@tabler/icons-react";
 import type { Cliente, DecisaoAcao, EstadoHub, OpcaoAcao, Parametros, Remessa } from "./models/types";
 import type { RespostaCredinfar } from "./engine/credinfarMock";
 import type { ExtrasDecisao } from "./services/estado";
@@ -31,12 +31,14 @@ import { Envio } from "./screens/Envio";
 import { Hoje } from "./screens/Hoje";
 import { Clientes } from "./screens/Clientes";
 import { Historico } from "./screens/Historico";
+import { Analises } from "./screens/Analises";
 import { Configuracoes } from "./screens/Configuracoes";
 
-export type Aba = "hoje" | "clientes" | "envio" | "historico" | "config";
+export type Aba = "hoje" | "clientes" | "analises" | "envio" | "historico" | "config";
 const TITULOS: Record<Aba, string> = {
   hoje: "Hoje",
   clientes: "Clientes",
+  analises: "Análises",
   envio: "Envio do mês",
   historico: "Histórico",
   config: "Configurações",
@@ -236,6 +238,7 @@ export function App() {
           <main className="content" key={aba}>
             {aba === "hoje" && <Hoje />}
             {aba === "clientes" && <Clientes />}
+            {aba === "analises" && <Analises />}
             {aba === "envio" && <Envio />}
             {aba === "historico" && <Historico />}
             {aba === "config" && <Configuracoes />}
@@ -278,6 +281,7 @@ function Sidebar({ aba, aberto, onMudar, travados }: { aba: Aba; aberto: boolean
       <div style={navSectionStyle}>O que você quer fazer</div>
       <NavItem icone={IconInbox} rotulo="Hoje" ativa={aba === "hoje"} onClick={() => onMudar("hoje")} />
       <NavItem icone={IconSearch} rotulo="Clientes" ativa={aba === "clientes"} onClick={() => onMudar("clientes")} />
+      <NavItem icone={IconChartBar} rotulo="Análises" ativa={aba === "analises"} onClick={() => onMudar("analises")} />
       <NavItem icone={IconSend} rotulo="Envio do mês" ativa={aba === "envio"} badge={travados} onClick={() => onMudar("envio")} />
       <NavItem icone={IconHistory} rotulo="Histórico" ativa={aba === "historico"} onClick={() => onMudar("historico")} />
 

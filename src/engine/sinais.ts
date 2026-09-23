@@ -8,7 +8,7 @@
 //   • separar quem atrasa com todo mundo (risco de perda) de quem atrasa só
 //     conosco (normalmente divergência de nota, boleto ou pedido);
 //   • achar bons pagadores com o limite cheio (venda travada sem motivo).
-import type { Cliente, OpcaoAcao, Parametros, Sinal, TipoSinal, CodigoSinal } from "../models/types";
+import type { Cliente, LeituraCliente, OpcaoAcao, Parametros, Sinal, TipoSinal, CodigoSinal } from "../models/types";
 import { consultarCredinfar, limiteQuota, type FichaResumo } from "./credinfarMock";
 import { brlInt, raizCnpj } from "./util";
 
@@ -148,6 +148,7 @@ export function avaliar(c: Cliente | null, f: FichaResumo): Leitura {
 
 export interface ResultadoVarredura {
   sinais: Sinal[];
+  leituras: LeituraCliente[];
   consultados: number;
   semQuota: number; // clientes que ficaram de fora por falta de consultas
   porNota: Record<string, { clientes: number; debito: number }>; // retrato da carteira por nota da Credinfar
@@ -160,6 +161,7 @@ export function lerCarteira(clientes: Cliente[], parametros: Parametros, consult
   const disponivel = Math.max(0, limiteQuota(parametros) - consultasUsadas - RESERVA_CONSULTAS);
   const candidatos = clientes.filter((c) => c.debitoAtual > 0 || c.limite > 0).sort((a, b) => b.debitoAtual - a.debitoAtual);
   const sinais: Sinal[] = [];
+  const leituras: LeituraCliente[] = [];
   const porNota: ResultadoVarredura["porNota"] = { A: { clientes: 0, debito: 0 }, B: { clientes: 0, debito: 0 }, C: { clientes: 0, debito: 0 }, D: { clientes: 0, debito: 0 }, E: { clientes: 0, debito: 0 } };
   const vistos = new Set<string>();
   let n = 0;
@@ -175,7 +177,7 @@ export function lerCarteira(clientes: Cliente[], parametros: Parametros, consult
     }
     const resp = consultarCredinfar(raiz, parametros, [c], consultasUsadas + n, agora, { semXml: true });
     if (resp.resultado === "IP_NAO_AUTORIZADO" || resp.resultado === "TOKEN_INVALIDO") {
-      return { sinais: [], consultados: 0, semQuota: 0, porNota, erro: resp.resultado === "IP_NAO_AUTORIZADO" ? "A Credinfar recusou: o IP de saída não é o cadastrado." : "A Credinfar recusou: chave de acesso ausente ou inválida." };
+      return { sinais: [], leituras: [], consultados: 0, semQuota: 0, porNota, erro: resp.resultado === "IP_NAO_AUTORIZADO" ? "A Credinfar recusou: o IP de saída não é o cadastrado." : "A Credinfar recusou: chave de acesso ausente ou inválida." };
     }
     if (resp.resultado === "LIMITE_EXCEDIDO") {
       semQuota += 1;
@@ -188,6 +190,7 @@ export function lerCarteira(clientes: Cliente[], parametros: Parametros, consult
       grupo.clientes += 1;
       grupo.debito += c.debitoAtual;
     }
+    leituras.push({ id: c.id, nota: resp.ficha.avaliacao, notaAnterior: resp.ficha.avaliacaoAnterior, pctMercado: Math.round(resp.ficha.percentualVencido * 10) / 10, tendencia: resp.ficha.tendencia, debito: c.debitoAtual, vencido: c.debitoVencido });
     const l = avaliar(c, resp.ficha);
     if (!l.tipo || l.codigo === "SEM_SINAL") continue;
     sinais.push({
@@ -207,5 +210,5 @@ export function lerCarteira(clientes: Cliente[], parametros: Parametros, consult
   }
   const peso: Record<TipoSinal, number> = { RISCO: 0, COBRANCA: 1, OPORTUNIDADE: 2 };
   sinais.sort((a, b) => peso[a.tipo] - peso[b.tipo] || b.valorEmJogo - a.valorEmJogo);
-  return { sinais, consultados: n, semQuota, porNota };
+  return { sinais, leituras, consultados: n, semQuota, porNota };
 }

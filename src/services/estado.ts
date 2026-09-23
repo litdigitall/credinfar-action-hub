@@ -454,7 +454,7 @@ export function atualizarCarteira(e: EstadoHub, usuario: string): { estado: Esta
   let estado: EstadoHub = {
     ...e,
     sinais: [...abertos, ...decididos],
-    varredura: { em: agoraIso(), consultados: r.consultados, semQuota: r.semQuota, porNota: r.porNota },
+    varredura: { em: agoraIso(), consultados: r.consultados, semQuota: r.semQuota, porNota: r.porNota, leituras: r.leituras },
     parametros: { ...e.parametros, consultasNoMes: e.parametros.consultasNoMes + r.consultados },
   };
   estado = comAuditoria(estado, auditar(estado, usuario, "Carteira atualizada na Credinfar", "Carteira", `${r.consultados.toLocaleString("pt-BR")} clientes consultados; ${abertos.length} pedem decisão${r.semQuota ? `; ${r.semQuota} ficaram de fora pelo limite do mês` : ""}.`));

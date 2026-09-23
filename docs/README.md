@@ -34,6 +34,12 @@ O app foi desenhado em torno dessas decisões, não das telas do sistema.
   pede (sem gastar consulta) e, a pedido, a ficha de hoje: leitura com as ações, tabela "com a gente x
   no mercado" (deve, vencido, atraso médio, limite), tendência de 12 meses. O XML e as tabelas ficam em
   "Ver detalhes". Também consulta empresa que não é cliente (8 dígitos do CNPJ).
+- **Análises**: a carteira inteira em nove gráficos, cada um respondendo a uma pergunta de negócio e com a
+  leitura escrita embaixo. Inadimplência em 12 meses, débito e vencido por mês, carteira por nota da
+  Credinfar (quanto do dinheiro está com quem o mercado avalia mal), aging do vencido, "com a gente x no
+  mercado" (quem atrasa com todo mundo x só conosco, com clique para abrir o cliente), migração de notas
+  no mês (quem piorou antes de atrasar com a gente), os 10 maiores devedores, débito por estado e o
+  efeito das decisões tomadas no app (limite retirado, limite dado, débito protegido, cobranças).
 - **Envio do mês**: três passos em uma tela (receber a carteira, corrigir o que travou, enviar). Só
   aparece o que impede o envio; cada travado tem Corrigir ou Tirar do envio; "Gerar arquivo e enviar"
   monta o INFASSOC.SIC no layout oficial, confere e devolve o protocolo. Avisos ficam recolhidos.
@@ -71,11 +77,13 @@ reserva para o dia a dia e não reabre o que já foi decidido no mês.
 1. **Hoje**: leia um cartão de risco em voz alta (o que aconteceu, por quê, quanto está em jogo) e
    clique em "Reduzir limite de X para Y". Mostre um de "Vender mais" e aumente o limite. Mostre um de
    cobrança "Paga os outros em dia e atrasa com a gente" e registre a ligação com a promessa.
-2. **Clientes**: busque "VetPrime", "Consultar a Credinfar agora": nota E, 45% vencido no mercado,
+2. **Análises**: mostre a migração de notas (61 clientes pioraram antes de atrasar com a gente), o gráfico
+   "com a gente x no mercado" (laranja atrasa com todo mundo, azul atrasa só conosco) e a concentração.
+3. **Clientes**: busque "VetPrime", "Consultar a Credinfar agora": nota E, 45% vencido no mercado,
    tabela com a gente x no mercado. "Ver detalhes" mostra o XML do manual.
-3. **Envio do mês**: corrija a Farmácia Boa Vida ("Usar o valor do ERP"), o CNPJ da Drogaria Horizonte
+4. **Envio do mês**: corrija a Farmácia Boa Vida ("Usar o valor do ERP"), o CNPJ da Drogaria Horizonte
    (61.412.110/0001-55), tire os demais, "Ver o arquivo antes", "Gerar arquivo e enviar".
-4. **Histórico**: as decisões, a cobrança e o envio com nome e hora.
+5. **Histórico**: as decisões, a cobrança e o envio com nome e hora.
 
 ## Rodar, testar e publicar
 

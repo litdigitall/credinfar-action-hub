@@ -9,6 +9,7 @@ import { cnpjValido, montarCnpj } from "../src/engine/util";
 import { estadoInicial, gerarClientes, parametrosIniciais } from "../src/data/seed";
 import { aprovarRemessa, consultar, enviarRemessa, enviarTudo, gerarArquivoRemessa, podeAprovar, receberRemessa, resolverAcao, statusSimples } from "../src/services/estado";
 import { avaliar, lerCarteira, RESERVA_CONSULTAS } from "../src/engine/sinais";
+import { analisar, NOTAS } from "../src/engine/analises";
 import { atualizarCarteira, registrarDecisao } from "../src/services/estado";
 
 let falhas = 0;
@@ -163,6 +164,22 @@ if (gr) {
   const eB = registrarDecisao(eS, gr.clienteId, gr.opcoes.find((o) => o.acao === "BLOQUEAR_VENDAS")!, {}, "teste");
   check(eB.clientes.find((c) => c.id === gr.clienteId)!.bloqueado === true, "segurar vendas marca o cliente");
 }
+
+// 7) Análises da carteira
+const an = analisar(eS);
+check(eS.varredura!.leituras.length === eS.varredura!.consultados, "varredura guarda uma leitura compacta por cliente consultado");
+check(an.tendencia.length === 12 && an.tendencia[11].enviados === eS.clientes.length, "histórico de 12 meses termina na competência corrente");
+check(Math.abs(an.porNota.reduce((t, x) => t + x.pct, 0) - 100) < 0.5 && an.porNota.length === NOTAS.length, "carteira por nota fecha em 100%");
+check(an.migracao.matriz.flat().reduce((t, x) => t + x, 0) === eS.varredura!.leituras.length && an.migracao.pioraram > 0, `migração de notas: ${an.migracao.pioraram} pioraram, ${an.migracao.melhoraram} melhoraram`);
+check(an.quadrantes.pontos.length > 100 && an.quadrantes.resumo.some((r) => r.grupo === "Atrasa só com a gente" && r.clientes > 0), "quadrantes com a gente x mercado povoados");
+check(an.concentracao.itens.length === 10 && an.concentracao.pctTop > 0 && an.concentracao.clientesPara80 > 10, `concentração: top 10 = ${an.concentracao.pctTop.toFixed(1)}%, ${an.concentracao.clientesPara80} clientes fazem 80%`);
+// O aging soma as faixas de cada cliente; a única diferença para o vencido total é a
+// Farmácia Boa Vida, cujas faixas foram deixadas propositalmente inconsistentes (caso AGING_MISMATCH do envio).
+const somaAging = an.aging.reduce((t, f) => t + f.valor, 0);
+const desvioAging = eS.clientes.filter((c) => c.debitoAtual > 0).reduce((t, c) => t + (c.debitoVencido - Object.values(c.vencidos).reduce((a, b) => a + b, 0)), 0);
+check(somaAging + desvioAging === an.kpis.vencido && desvioAging > 0 && desvioAging < an.kpis.vencido * 0.01, `aging fecha com o vencido total (só o caso inconsistente de propósito fica de fora: R$ ${desvioAging})`);
+const anD = analisar(eD);
+check(anD.efeito.limiteReduzido > 0 || anD.efeito.limiteAumentado > 0, "efeito das decisões lê os limites alterados");
 
 console.log(falhas === 0 ? "\nMotor: todos os cenários passaram." : `\nMotor: ${falhas} falha(s).`);
 process.exit(falhas === 0 ? 0 : 1);

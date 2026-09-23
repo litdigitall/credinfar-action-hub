@@ -3,12 +3,12 @@
 // Apêndice B); os demais são sintéticos, gerados com semente fixa, para dar a
 // volumetria de uma remessa real (3.000 registros, dezenas de alertas, poucos
 // bloqueios).
-import type { Acao, Cliente, Consulta, EstadoHub, Parametros, RegistroAuditoria, Remessa, Segmento } from "../models/types";
+import type { Acao, Cliente, Consulta, EstadoHub, Parametros, PontoHistorico, RegistroAuditoria, Remessa, Segmento } from "../models/types";
 import { ajustarSequenciaAcao, resumoValidacao, validarRemessa } from "../engine/regras";
 import { lerCarteira } from "../engine/sinais";
 import { montarCnpj, prng, hashCurto } from "../engine/util";
 
-export const VERSAO_ESTADO = 6;
+export const VERSAO_ESTADO = 8;
 export const TOTAL_CLIENTES = 3000;
 
 const CIDADES: { cidade: string; uf: string; cep: string }[] = [
@@ -234,6 +234,33 @@ function historico(id: string, competencia: string, registros: number, recebidaE
 // Estado inicial completo: carteira, remessa corrente em ACTION_REQUIRED
 // (como o protótipo do Documento Mestre), remessas históricas enviadas,
 // balanços, consultas e auditoria.
+// Doze meses da carteira até a competência corrente (tendência para as análises).
+// Determinístico: débito oscila ±6%, vencido sobe devagar nos últimos meses.
+export function gerarHistorico(clientes: Cliente[], competencia: string, notasDE: number): PontoHistorico[] {
+  const r = prng(20260922);
+  const [mes, ano] = competencia.split("/").map(Number);
+  const debitoAtual = clientes.reduce((t, c) => t + c.debitoAtual, 0);
+  const vencidoAtual = clientes.reduce((t, c) => t + c.debitoVencido, 0);
+  const pctAtual = debitoAtual > 0 ? (vencidoAtual / debitoAtual) * 100 : 5;
+  const pontos: PontoHistorico[] = [];
+  for (let k = 11; k >= 0; k--) {
+    const d = new Date(ano, mes - 1 - k, 1);
+    const fator = k === 0 ? 1 : 0.86 + (11 - k) * 0.012 + (r() - 0.5) * 0.03; // carteira cresce ~14% no ano
+    const debito = Math.round(debitoAtual * fator);
+    const pct = k === 0 ? pctAtual : Math.max(2.5, pctAtual - 0.9 + (11 - k) * 0.08 + (r() - 0.5) * 0.6 - (k > 8 ? 0.3 : 0));
+    pontos.push({
+      mes: `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getFullYear()).slice(2)}`,
+      debito,
+      vencido: Math.round((debito * pct) / 100),
+      pctVencido: Math.round(pct * 10) / 10,
+      dso: Math.round(40 + (r() - 0.5) * 6 + (11 - k) * 0.3),
+      enviados: k === 0 ? clientes.length : 2900 + Math.floor(r() * 90),
+      notasDE: Math.round(notasDE * (k === 0 ? 1 : 0.85 + r() * 0.25)),
+    });
+  }
+  return pontos;
+}
+
 export function estadoInicial(): EstadoHub {
   const agora = new Date().toISOString();
   const clientes = gerarClientes();
@@ -281,7 +308,8 @@ export function estadoInicial(): EstadoHub {
   return {
     versao: VERSAO_ESTADO,
     sinais: leitura.sinais,
-    varredura: { em: leituraEm, consultados: leitura.consultados, semQuota: leitura.semQuota, porNota: leitura.porNota },
+    varredura: { em: leituraEm, consultados: leitura.consultados, semQuota: leitura.semQuota, porNota: leitura.porNota, leituras: leitura.leituras },
+    historicoCarteira: gerarHistorico(clientes, parametros.competencia, (leitura.porNota.D?.debito ?? 0) + (leitura.porNota.E?.debito ?? 0)),
     clientes,
     remessas: [
       remessa,

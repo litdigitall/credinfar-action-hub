@@ -2,7 +2,7 @@
 // dinheiro em jogo. Vem da leitura mensal da carteira na Credinfar cruzada com
 // a posição do cliente conosco. Uma decisão por cartão, um clique para agir.
 import { useMemo, useState } from "react";
-import { IconArrowRight, IconCoin, IconListCheck, IconRefresh, IconSearch } from "@tabler/icons-react";
+import { IconArrowRight, IconChartBar, IconCoin, IconListCheck, IconRefresh, IconSearch } from "@tabler/icons-react";
 import { useHub } from "../App";
 import { Botao } from "../components/Botao";
 import { CartaoDecisao, COR_TIPO, ModalDecisao, ROTULO_TIPO } from "../components/Decidir";
@@ -55,9 +55,14 @@ export function Hoje() {
             {abertos.length === 0 ? "Nenhuma decisão pendente. A carteira está em dia." : lista.length > PRIMEIROS ? `Comece por estas ${PRIMEIROS}. São as de maior valor entre as ${fmtInt(abertos.length)} que a carteira pede neste mês.` : `${fmtInt(lista.length)} decisão(ões) esperam por você.`}
           </p>
         </div>
-        <Botao variante="secundario" icone={<IconRefresh size={16} />} onClick={atualizarLeitura}>
-          Atualizar com a Credinfar
-        </Botao>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Botao variante="secundario" icone={<IconChartBar size={16} />} onClick={() => setAba("analises")}>
+            Análises da carteira
+          </Botao>
+          <Botao variante="secundario" icone={<IconRefresh size={16} />} onClick={atualizarLeitura}>
+            Atualizar com a Credinfar
+          </Botao>
+        </div>
       </div>
 
       {/* ------------------------------------------------ Números do mês */}

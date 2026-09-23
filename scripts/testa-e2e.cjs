@@ -85,6 +85,14 @@ const { chromium } = require("playwright-core");
   await page.waitForTimeout(300);
   ok((await main()).includes("<dbCredinfar>"), "detalhes trazem o XML da Credinfar");
 
+  // ---------------------------------------------------------------- Análises
+  await ir("Análises");
+  await page.waitForTimeout(900);
+  const ta = await main();
+  ok(ta.includes("Carteira por nota") && ta.includes("Com a gente x no mercado") && ta.includes("Migração de notas"), "análises: carteira por nota, quadrantes e migração");
+  ok((await page.locator("main svg.recharts-surface").count()) >= 5, `análises com gráficos (${await page.locator("main svg.recharts-surface").count()} gráficos)`);
+  await shot("03b-analises");
+
   // ---------------------------------------------------------------- Envio do mês
   await ir(/^Envio do mês/);
   const t3 = await main();

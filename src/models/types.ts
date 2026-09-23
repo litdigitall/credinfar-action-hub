@@ -239,11 +239,32 @@ export interface Sinal {
   status: "ABERTO" | "DECIDIDO";
   decisao?: { acao: AcaoDecisao; rotulo: string; detalhe: string; usuario: string; em: string };
 }
+// Leitura compacta por cliente na varredura mensal (alimenta as análises)
+export interface LeituraCliente {
+  id: string;
+  nota: string;
+  notaAnterior: string;
+  pctMercado: number; // % vencido no mercado
+  tendencia: "melhorando" | "estável" | "piorando";
+  debito: number; // conosco
+  vencido: number; // conosco
+}
 export interface Varredura {
   em: string;
   consultados: number;
   semQuota: number;
   porNota: Record<string, { clientes: number; debito: number }>;
+  leituras: LeituraCliente[];
+}
+// Um mês da carteira (série de 12 meses para tendência)
+export interface PontoHistorico {
+  mes: string; // MM/AA
+  debito: number;
+  vencido: number;
+  pctVencido: number;
+  dso: number;
+  enviados: number;
+  notasDE: number; // débito em clientes com nota D ou E
 }
 
 export interface RegistroAuditoria {
@@ -282,6 +303,7 @@ export interface EstadoHub {
   auditoria: RegistroAuditoria[];
   sinais: Sinal[];
   varredura: Varredura | null;
+  historicoCarteira: PontoHistorico[];
   parametros: Parametros;
   atualizadoEm: string;
 }
